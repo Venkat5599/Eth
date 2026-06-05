@@ -11,6 +11,7 @@
 import { store } from "./store";
 import { draftNudge } from "./llm";
 import { sendNudge, settle } from "./rails";
+import { chain, chainEnabled } from "./chain";
 import type { Invoice } from "./types";
 
 const POLL = Number(process.env.AGENT_POLL_SECONDS ?? 20) * 1000;
@@ -50,6 +51,18 @@ async function onClientPaid(inv: Invoice) {
   const days = Math.max(1, Math.round((Date.now() - created) / 86_400_000));
 
   const settlement = await settle(inv, inv.amountUsd);
+  // real on-chain release when wired
+  if (chainEnabled && inv.onchainId) {
+    try {
+      const r = await chain.release(BigInt(inv.onchainId));
+      if (r) {
+        settlement.txHash = r.url;
+        console.log(`[chain] released invoice ${inv.id} · ${r.url}`);
+      }
+    } catch (e) {
+      console.log(`[chain] release failed: ${(e as Error).message}`);
+    }
+  }
   inv.settlement = settlement;
   // if previously advanced, the pool is repaid and the invoice is "recovered"
   inv.status = inv.status === "advanced" ? "recovered" : "released";
@@ -96,6 +109,20 @@ const server = Bun.serve({
         createdAt: new Date().toISOString(),
         nudges: [],
       };
+      // real on-chain escrow when the chain is wired (VPS)
+      if (chainEnabled) {
+        try {
+          const due = Math.floor(new Date(inv.dueDate).getTime() / 1000);
+          const r = await chain.createInvoice(inv.freelancer as `0x${string}`, inv.amountUsd, due);
+          if (r) {
+            inv.onchainId = r.id.toString();
+            inv.onchainTx = r.url;
+            console.log(`[chain] invoice ${inv.id} on-chain id ${inv.onchainId} · ${r.url}`);
+          }
+        } catch (e) {
+          console.log(`[chain] create_invoice failed: ${(e as Error).message}`);
+        }
+      }
       store.upsert(inv);
       return json(inv, 201);
     }

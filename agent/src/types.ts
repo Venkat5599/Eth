@@ -21,6 +21,8 @@ export interface Invoice {
   nudges: Nudge[];
   advanceUsd?: number;      // amount advanced to the freelancer
   settlement?: Settlement;
+  onchainId?: string;       // on-chain invoice id (Arbitrum Sepolia), when chain is enabled
+  onchainTx?: string;       // arbiscan url for the create_invoice tx
 }
 
 export interface Nudge {
