@@ -105,7 +105,7 @@ function Hero() {
   const reduce = useReducedMotion();
   return (
     <section className="grid-bg relative flex min-h-[100dvh] flex-col justify-between overflow-hidden pb-10 pt-[68px]">
-      <div className="absolute inset-0 z-0 opacity-70"><ShaderBg /></div>
+      <div className="absolute inset-0 z-0"><ShaderBg /></div>
       {/* editorial meta bar */}
       <Rise className="shell relative z-10 mt-8 flex items-center justify-between border-b border-border pb-4 text-[11px] uppercase tracking-[0.24em] text-text-faint">
         <span>[ ART + TECH ]</span>

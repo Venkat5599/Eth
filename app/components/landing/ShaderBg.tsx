@@ -27,16 +27,15 @@ float fbm(vec2 p){
 void main(){
   vec2 uv = gl_FragCoord.xy/u_res.xy;
   vec2 q = uv; q.x *= u_res.x/u_res.y;
-  float t = u_time*0.04;
+  float t = u_time*0.045;
   vec2 m = (u_mouse/u_res - 0.5);
-  float n = fbm(q*2.6 + vec2(t, -t) + m*0.6);
-  n = fbm(q*3.2 + n + vec2(-t*0.7, t));
-  float v = smoothstep(0.25, 0.95, n);
-  // warm off-white over charcoal, very low intensity
-  vec3 col = mix(vec3(0.043,0.047,0.055), vec3(0.95,0.94,0.92), v*0.10);
-  // faint vignette
-  float vig = smoothstep(1.2, 0.2, length(uv-0.5));
-  gl_FragColor = vec4(col*vig, 1.0);
+  float n = fbm(q*2.8 + vec2(t, -t) + m*0.5);
+  n = fbm(q*3.4 + n);
+  float hi = smoothstep(0.5, 0.96, n);
+  float vig = smoothstep(1.15, 0.25, length(uv-0.5));
+  // transparent everywhere except faint warm-white wisps -> sits over the dark hero
+  float a = hi * 0.07 * vig;
+  gl_FragColor = vec4(vec3(0.96,0.95,0.92), a);
 }`;
 
 export function ShaderBg() {
@@ -46,8 +45,11 @@ export function ShaderBg() {
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
-    const gl = canvas.getContext("webgl");
+    const gl = canvas.getContext("webgl", { alpha: true, premultipliedAlpha: false });
     if (!gl) return;
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.clearColor(0, 0, 0, 0);
 
     const compile = (type: number, src: string) => {
       const s = gl.createShader(type)!;
@@ -90,6 +92,7 @@ export function ShaderBg() {
     let raf = 0;
     const start = performance.now();
     const draw = () => {
+      gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniform2f(uRes, canvas.width, canvas.height);
       gl.uniform1f(uTime, (performance.now() - start) / 1000);
       gl.uniform2f(uMouse, mouse.x, mouse.y);
