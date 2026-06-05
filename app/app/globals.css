@@ -112,6 +112,25 @@ body {
 .spin-fast { animation: cobra-spin 3.2s linear infinite; }
 @media (prefers-reduced-motion: reduce) { .spin, .spin-fast { animation: none; } }
 
+/* velocity skew — driven by Lenis, composes with nothing else on tagged elements */
+.skewable { transform: skewY(calc(var(--vel, 0) * 1deg)); will-change: transform; }
+
+/* custom cursor (desktop, fine-pointer only) */
+@media (pointer: fine) {
+  .has-cursor, .has-cursor a, .has-cursor button { cursor: none; }
+}
+.cursor-dot {
+  position: fixed; top: 0; left: 0; z-index: 90; pointer-events: none;
+  width: 14px; height: 14px; border-radius: 999px;
+  border: 1.5px solid var(--text); mix-blend-mode: difference;
+  translate: -50% -50%; will-change: transform, width, height;
+}
+
+/* page-load intro */
+.intro-wrap { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: grid; place-items: center; }
+.intro-bars { position: fixed; inset: 0; z-index: 99; display: flex; pointer-events: none; }
+.intro-bar { flex: 1; background: var(--bg); }
+
 .chapter {
   position: sticky;
   top: 0;

@@ -11,15 +11,22 @@ import { SmoothScroll } from "@/components/landing/SmoothScroll";
 import { ScrollProgress } from "@/components/landing/ScrollProgress";
 import { Magnetic } from "@/components/landing/Magnetic";
 import { CodeStream } from "@/components/landing/CodeStream";
+import { Intro } from "@/components/landing/Intro";
+import { Cursor } from "@/components/landing/Cursor";
+import { ShaderBg } from "@/components/landing/ShaderBg";
 
 export default function Landing() {
   return (
     <main className="relative">
+      <Intro />
+      <Cursor />
       <SmoothScroll />
       <ScrollProgress />
       <Nav />
       <Hero />
-      <Marquee text="Get paid early" />
+      <div className="skewable">
+        <Marquee text="Get paid early" />
+      </div>
       <CodeSection />
       <div id="chapters">
         <Chapters />
@@ -89,15 +96,16 @@ function Hero() {
   const reduce = useReducedMotion();
   return (
     <section className="grid-bg relative flex min-h-[100dvh] flex-col justify-between overflow-hidden pb-10 pt-[68px]">
+      <div className="absolute inset-0 z-0 opacity-70"><ShaderBg /></div>
       {/* editorial meta bar */}
-      <Rise className="shell mt-8 flex items-center justify-between border-b border-border pb-4 text-[11px] uppercase tracking-[0.24em] text-text-faint">
+      <Rise className="shell relative z-10 mt-8 flex items-center justify-between border-b border-border pb-4 text-[11px] uppercase tracking-[0.24em] text-text-faint">
         <span>[ ART + TECH ]</span>
         <span className="hidden sm:block">Iced invoices, served early</span>
         <span>2026 / EDITION 01</span>
       </Rise>
 
       {/* giant headline */}
-      <div className="shell relative">
+      <div className="shell relative z-10">
         <h1 className="display text-[clamp(56px,12.5vw,184px)]">
           <SplitReveal as="span" text="Get paid," className="block" />
           <SplitReveal as="span" text="then paid" className="block" delay={0.08} />
@@ -114,7 +122,7 @@ function Hero() {
       </div>
 
       {/* bottom split: copy + stats */}
-      <div className="shell grid grid-cols-1 gap-10 lg:grid-cols-[1fr_auto] lg:items-end">
+      <div className="shell relative z-10 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_auto] lg:items-end">
         <Rise delay={0.2} className="max-w-[44ch]">
           <p className="text-[clamp(15px,1.45vw,20px)] leading-relaxed text-text-dim">
             Cobra chases your invoices, settles in pesos, files the tax doc, and advances your cash
@@ -219,7 +227,7 @@ function Compare() {
     <section id="compare" className="relative py-[14vw]">
       <div className="shell">
         <div className="mb-16 flex items-end justify-between gap-6 border-b border-border-strong pb-6">
-          <h2 className="display max-w-[12ch] text-[clamp(38px,7vw,104px)]">
+          <h2 className="display skewable max-w-[12ch] text-[clamp(38px,7vw,104px)]">
             <SplitReveal text="The bank does" className="block" />
             <SplitReveal text="none of this." className="block" delay={0.08} />
           </h2>
@@ -259,7 +267,7 @@ function Testimonials() {
     <section id="reviews" className="relative border-t border-border py-[14vw]">
       <div className="shell">
         <div className="mb-16 flex items-end justify-between gap-6">
-          <h2 className="display max-w-[16ch] text-[clamp(38px,7vw,104px)]">
+          <h2 className="display skewable max-w-[16ch] text-[clamp(38px,7vw,104px)]">
             <SplitReveal text="Do not take" className="block" />
             <SplitReveal text="our word for it." className="block" delay={0.08} />
           </h2>
@@ -292,7 +300,7 @@ function CtaFooter() {
   return (
     <footer className="relative overflow-hidden border-t border-border-strong py-[16vw]">
       <div className="shell relative z-10">
-        <h2 className="display text-[clamp(56px,15vw,240px)]">
+        <h2 className="display skewable text-[clamp(56px,15vw,240px)]">
           <SplitReveal text="Cobra it." />
         </h2>
         <div className="mt-12 flex flex-wrap items-end justify-between gap-8 border-t border-border pt-8">
