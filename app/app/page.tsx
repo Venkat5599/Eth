@@ -14,6 +14,8 @@ import { CodeStream } from "@/components/landing/CodeStream";
 import { Intro } from "@/components/landing/Intro";
 import { Cursor } from "@/components/landing/Cursor";
 import { ShaderBg } from "@/components/landing/ShaderBg";
+import { HorizontalPan } from "@/components/landing/HorizontalPan";
+import { ScrollFill } from "@/components/landing/ScrollFill";
 
 export default function Landing() {
   return (
@@ -28,9 +30,16 @@ export default function Landing() {
         <Marquee text="Get paid early" />
       </div>
       <CodeSection />
+      <section className="shell relative py-[14vw]">
+        <span className="text-[11px] uppercase tracking-[0.24em] text-text-faint">[ The thesis ]</span>
+        <div className="mt-8">
+          <ScrollFill text="The bottleneck was never the payment. It was knowing who actually pays." />
+        </div>
+      </section>
       <div id="chapters">
         <Chapters />
       </div>
+      <HorizontalPan />
       <Compare />
       <Testimonials />
       <CtaFooter />
