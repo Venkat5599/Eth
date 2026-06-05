@@ -56,3 +56,56 @@ body { background: var(--bg); color: var(--text); font-family: var(--font-sans);
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition-duration: .01ms !important; }
 }
+
+/* ---- Osmo fluid scaling system (https://osmo.supply) ---- */
+:root {
+  --size-unit: 16;
+  --size-container-ideal: 1440;
+  --size-container-min: 992px;
+  --size-container-max: 2560px;
+  --size-container: clamp(var(--size-container-min), 100vw, var(--size-container-max));
+  --size-font: calc(var(--size-container) / (var(--size-container-ideal) / var(--size-unit)));
+}
+@media screen and (max-width: 991px) {
+  :root { --size-container-ideal: 640; --size-container-min: 768px; --size-container-max: 991px; }
+}
+@media screen and (max-width: 767px) {
+  :root { --size-container-ideal: 550; --size-container-min: 480px; --size-container-max: 767px; }
+}
+@media screen and (max-width: 479px) {
+  :root { --size-container-ideal: 390; --size-container-min: 320px; --size-container-max: 479px; }
+}
+.fluid { font-size: var(--size-font); }
+.shell { width: min(92vw, 1320px); margin-inline: auto; }
+
+/* ---- landing utilities ---- */
+.display {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 0.92;
+  text-wrap: balance;
+}
+.outline-word {
+  color: transparent;
+  -webkit-text-stroke: 1.4px var(--text-faint);
+}
+/* SplitText lines start clipped; GSAP reveals them. Fallback visible if JS off. */
+.split-line { display: inline-block; will-change: transform; }
+.no-js-visible { opacity: 1; }
+
+.marquee-track { display: inline-flex; white-space: nowrap; will-change: transform; }
+
+.chapter {
+  position: sticky;
+  top: 0;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.glow {
+  background:
+    radial-gradient(60% 60% at 50% 0%, rgba(52,211,153,.16), transparent 70%);
+}
