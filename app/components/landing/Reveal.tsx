@@ -4,20 +4,24 @@ import { useEffect, useRef } from "react";
 import { useReducedMotion } from "motion/react";
 import { useGsap } from "@/lib/gsap";
 
-/* Word-by-word reveal on scroll. Splits the string itself, so no premium SplitText
-   dependency. Honors reduced motion (renders fully visible, no animation). */
+const EASE = "expo.out";
+
+/* Line-mask reveal: each word rides up from behind a clip on scroll-in.
+   Splits the string itself, so no premium SplitText dependency. */
 export function SplitReveal({
   text,
   as: Tag = "span",
   className = "",
   delay = 0,
-  stagger = 0.06,
+  stagger = 0.045,
+  start = "top 88%",
 }: {
   text: string;
   as?: keyof React.JSX.IntrinsicElements;
   className?: string;
   delay?: number;
   stagger?: number;
+  start?: string;
 }) {
   const ref = useRef<HTMLElement>(null);
   const reduce = useReducedMotion();
@@ -27,30 +31,70 @@ export function SplitReveal({
     if (reduce || !ref.current) return;
     const words = ref.current.querySelectorAll("[data-w]");
     const ctx = gsap.context(() => {
-      gsap.set(words, { yPercent: 115, opacity: 0 });
+      gsap.set(words, { yPercent: 118, rotate: 2 });
       gsap.to(words, {
         yPercent: 0,
-        opacity: 1,
-        duration: 0.9,
+        rotate: 0,
+        duration: 1.15,
         delay,
         stagger,
-        ease: "power4.out",
-        scrollTrigger: { trigger: ref.current, start: "top 85%", once: true },
+        ease: EASE,
+        scrollTrigger: { trigger: ref.current, start, once: true },
       });
     }, ref);
     return () => ctx.revert();
-  }, [reduce, gsap, delay, stagger]);
+  }, [reduce, gsap, delay, stagger, start]);
 
   return (
     <Tag ref={ref as never} className={className}>
       {text.split(" ").map((w, i) => (
-        <span key={i} className="inline-block overflow-hidden align-bottom">
-          <span data-w className="inline-block">
+        <span key={i} className="inline-block overflow-hidden pb-[0.08em] align-bottom">
+          <span data-w className="inline-block will-change-transform">
             {w}&nbsp;
           </span>
         </span>
       ))}
     </Tag>
+  );
+}
+
+/* Generic block rise + fade for paragraphs, rows, media. */
+export function Rise({
+  children,
+  className = "",
+  y = 28,
+  delay = 0,
+  start = "top 90%",
+}: {
+  children: React.ReactNode;
+  className?: string;
+  y?: number;
+  delay?: number;
+  start?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
+  const { gsap } = useGsap();
+
+  useEffect(() => {
+    if (reduce || !ref.current) return;
+    const ctx = gsap.context(() => {
+      gsap.from(ref.current, {
+        y,
+        opacity: 0,
+        duration: 1,
+        delay,
+        ease: EASE,
+        scrollTrigger: { trigger: ref.current, start, once: true },
+      });
+    }, ref);
+    return () => ctx.revert();
+  }, [reduce, gsap, y, delay, start]);
+
+  return (
+    <div ref={ref} className={className}>
+      {children}
+    </div>
   );
 }
 
@@ -79,9 +123,9 @@ export function Counter({
     const ctx = gsap.context(() => {
       gsap.to(obj, {
         v: to,
-        duration: 1.6,
-        ease: "power2.out",
-        scrollTrigger: { trigger: el, start: "top 90%", once: true },
+        duration: 2,
+        ease: "expo.out",
+        scrollTrigger: { trigger: el, start: "top 92%", once: true },
         onUpdate: () => {
           el.textContent = `${Math.round(obj.v)}${suffix}`;
         },
