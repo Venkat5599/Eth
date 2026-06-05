@@ -52,8 +52,7 @@ const CHAPTERS: Chapter[] = [
     kicker: "It settles",
     title: "Pesos in your bank. Taxes already filed.",
     body: "A slice held in MXNe, the rest off-ramped via SPEI, and the tax doc generated. The whole back office, gone.",
-    tint: "#f3f1ea",
-    dark: true,
+    tint: "#0a0d12",
   },
 ];
 
