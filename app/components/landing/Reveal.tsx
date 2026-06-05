@@ -8,6 +8,8 @@ const EASE = "expo.out";
 
 /* Line-mask reveal: each word rides up from behind a clip on scroll-in.
    Splits the string itself, so no premium SplitText dependency. */
+type TagName = "span" | "div" | "p" | "h1" | "h2" | "h3";
+
 export function SplitReveal({
   text,
   as: Tag = "span",
@@ -17,7 +19,7 @@ export function SplitReveal({
   start = "top 88%",
 }: {
   text: string;
-  as?: keyof React.JSX.IntrinsicElements;
+  as?: TagName;
   className?: string;
   delay?: number;
   stagger?: number;

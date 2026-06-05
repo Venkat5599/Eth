@@ -106,7 +106,11 @@ body {
 .split-line { display: inline-block; will-change: transform; }
 .no-js-visible { opacity: 1; }
 
-.marquee-track { display: inline-flex; white-space: nowrap; will-change: transform; }
+.marquee-track { display: inline-flex; align-items: center; white-space: nowrap; will-change: transform; }
+@keyframes cobra-spin { to { transform: rotate(360deg); } }
+.spin { animation: cobra-spin 6s linear infinite; }
+.spin-fast { animation: cobra-spin 3.2s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .spin, .spin-fast { animation: none; } }
 
 .chapter {
   position: sticky;

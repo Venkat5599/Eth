@@ -8,7 +8,7 @@ import { useGsap } from "@/lib/gsap";
    logic (Stylus advance gate + Circom credit constraint), so the device is honest.
    Rendered from a token model so no raw angle brackets confuse the JSX parser. */
 
-type Tok = [string, ("cm" | "kw" | "fn" | "st" | "pu")?];
+type Tok = [string, string?];
 const L: Tok[][] = [
   [["// module cobra::collections", "cm"]],
   [["/// the agent chases. the contract holds the money.", "cm"]],
