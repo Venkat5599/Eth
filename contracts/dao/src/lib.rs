@@ -115,9 +115,11 @@ impl GrantsDao {
         }
         self.voted.setter(id).setter(msg::sender()).set(true);
         if support {
-            self.votes_for.setter(id).set(self.votes_for.getter(id).get() + weight);
+            let cur = self.votes_for.getter(id).get();
+            self.votes_for.setter(id).set(cur + weight);
         } else {
-            self.votes_against.setter(id).set(self.votes_against.getter(id).get() + weight);
+            let cur = self.votes_against.getter(id).get();
+            self.votes_against.setter(id).set(cur + weight);
         }
         evm::log(Voted { id, voter: msg::sender(), support, weight });
         Ok(())
