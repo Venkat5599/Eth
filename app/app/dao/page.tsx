@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   Bank, Plus, ThumbsUp, ThumbsDown, CheckCircle, XCircle, Lightning,
-  Wallet, ShieldCheck, ArrowUpRight, Clock,
+  Wallet, ShieldCheck, ArrowUpRight, Clock, UserPlus, PaperPlaneTilt,
 } from "@phosphor-icons/react";
 import {
   connect, getStats, getProposals, powerOf, tx, fmtEth, short,
@@ -67,7 +67,7 @@ export default function DaoPage() {
             <div className="mt-4 flex flex-col gap-3">
               {props.length === 0 && (
                 <div className="rounded-[16px] border border-dashed border-border-strong py-14 text-center text-[13px] text-text-faint">
-                  No proposals yet. {power > 0n ? "Create the first grant." : "Connect a member wallet to propose."}
+                  No proposals yet. {power > 0n ? "Create the first grant." : "Join the DAO to propose and vote."}
                 </div>
               )}
               {props.map((p) => (
@@ -81,8 +81,15 @@ export default function DaoPage() {
           </section>
 
           <aside className="flex flex-col gap-6">
+            {account && power === 0n && (
+              <JoinPanel busy={busy} onJoin={() => run(() => tx.join(account!), "Joined the DAO — 3 GOV minted to you")} />
+            )}
             <NewProposal disabled={!account || power === 0n} busy={busy}
               onPropose={(r, e, d) => run(() => tx.propose(account!, r as `0x${string}`, e, d), "Proposal created")} />
+            {power > 0n && (
+              <TransferPanel busy={busy} balance={power}
+                onTransfer={(to, amt) => run(() => tx.transfer(account!, to as `0x${string}`, amt), `Sent ${amt} GOV`)} />
+            )}
             <Treasury busy={busy} connected={!!account}
               onDeposit={(e) => run(() => tx.deposit(account!, e), `Deposited ${e} ETH to treasury`)} />
             {isOwner && <OwnerPanel busy={busy}
@@ -261,6 +268,35 @@ function Treasury({ busy, connected, onDeposit }: { busy: boolean; connected: bo
       <div className="mt-3 flex gap-2">
         <input value={amt} onChange={(e) => setAmt(e.target.value.replace(/[^0-9.]/g, ""))} inputMode="decimal" placeholder="ETH" className="nums flex-1 rounded-[10px] border border-border bg-surface-2 px-3 py-2 text-[13px] outline-none focus:border-border-strong" />
         <button disabled={!connected || busy || !amt} onClick={() => { onDeposit(amt); setAmt(""); }} className="rounded-full border border-border-strong px-4 py-2 text-[13px] text-text-dim hover:text-text disabled:opacity-40">Deposit</button>
+      </div>
+    </div>
+  );
+}
+
+function JoinPanel({ busy, onJoin }: { busy: boolean; onJoin: () => void }) {
+  return (
+    <div className="rounded-[16px] border p-4" style={{ borderColor: "var(--accent-dim)", background: "linear-gradient(160deg,rgba(52,211,153,.10),rgba(52,211,153,.02))" }}>
+      <Label icon={<UserPlus size={14} weight="bold" />}>Become a member</Label>
+      <p className="mt-2 text-[11.5px] text-text-faint">Join the DAO to receive 3 GOV — a transferable governance token. Then you can propose and vote.</p>
+      <button disabled={busy} onClick={onJoin} className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-[13px] font-semibold disabled:opacity-40" style={{ background: "var(--accent)", color: "var(--accent-ink)" }}>
+        <UserPlus size={15} weight="bold" /> Join — claim 3 GOV
+      </button>
+    </div>
+  );
+}
+
+function TransferPanel({ busy, balance, onTransfer }: { busy: boolean; balance: bigint; onTransfer: (to: string, amt: string) => void }) {
+  const [to, setTo] = useState(""); const [amt, setAmt] = useState("");
+  return (
+    <div className="rounded-[16px] border border-border bg-surface p-4">
+      <Label icon={<PaperPlaneTilt size={14} weight="bold" />}>Send GOV</Label>
+      <p className="mt-2 text-[11.5px] text-text-faint">Voting power is a transferable token. You hold <span className="nums text-text">{balance.toString()}</span> GOV.</p>
+      <div className="mt-3 flex flex-col gap-2.5">
+        <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="Recipient (0x…)" className="rounded-[10px] border border-border bg-surface-2 px-3 py-2 text-[13px] outline-none focus:border-border-strong" />
+        <div className="flex gap-2">
+          <input value={amt} onChange={(e) => setAmt(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="GOV amount" className="nums flex-1 rounded-[10px] border border-border bg-surface-2 px-3 py-2 text-[13px] outline-none focus:border-border-strong" />
+          <button disabled={busy || !to || !amt} onClick={() => { onTransfer(to, amt); setTo(""); setAmt(""); }} className="rounded-full px-4 py-2 text-[13px] font-semibold disabled:opacity-40" style={{ background: "var(--accent)", color: "var(--accent-ink)" }}>Send</button>
+        </div>
       </div>
     </div>
   );

@@ -21,6 +21,9 @@ const RPC = process.env.NEXT_PUBLIC_ARB_RPC ?? "https://sepolia-rollup.arbitrum.
 export const ABI = [
   { type: "function", name: "init", stateMutability: "nonpayable", inputs: [{ name: "voting_period", type: "uint256" }, { name: "quorum", type: "uint256" }], outputs: [] },
   { type: "function", name: "grantPower", stateMutability: "nonpayable", inputs: [{ name: "member", type: "address" }, { name: "amount", type: "uint256" }], outputs: [] },
+  { type: "function", name: "join", stateMutability: "nonpayable", inputs: [], outputs: [] },
+  { type: "function", name: "transfer", stateMutability: "nonpayable", inputs: [{ name: "to", type: "address" }, { name: "amount", type: "uint256" }], outputs: [] },
+  { type: "function", name: "totalSupply", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "deposit", stateMutability: "payable", inputs: [], outputs: [] },
   { type: "function", name: "propose", stateMutability: "nonpayable", inputs: [{ name: "recipient", type: "address" }, { name: "amount", type: "uint256" }, { name: "description", type: "string" }], outputs: [{ type: "uint256" }] },
   { type: "function", name: "vote", stateMutability: "nonpayable", inputs: [{ name: "id", type: "uint256" }, { name: "support", type: "bool" }], outputs: [] },
@@ -150,6 +153,8 @@ export const tx = {
   execute: (a: Address, id: number) => send(a, "execute", [BigInt(id)]),
   deposit: (a: Address, eth: string) => send(a, "deposit", [], parseEther(eth)),
   grantPower: (a: Address, member: Address, amount: string) => send(a, "grantPower", [member, BigInt(amount)]),
+  join: (a: Address) => send(a, "join", []),
+  transfer: (a: Address, to: Address, amount: string) => send(a, "transfer", [to, BigInt(amount)]),
 };
 
 export const fmtEth = (w: bigint) => Number(formatEther(w)).toLocaleString("en-US", { maximumFractionDigits: 4 });
