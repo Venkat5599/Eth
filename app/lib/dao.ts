@@ -132,7 +132,13 @@ function wallet(account: Address) {
 
 async function send(account: Address, functionName: string, args: any[] = [], value?: bigint) {
   const { request } = await pub.simulateContract({ address: DAO_ADDRESS, abi: ABI, functionName: functionName as never, args: args as never, account, value });
-  const hash = await wallet(account).writeContract(request);
+  // Arbitrum Sepolia base fee can rise above the wallet's stale estimate -> "max fee per gas
+  // less than block base fee". Pin generous EIP-1559 fees (0.5 gwei cap) so the tx always lands.
+  const hash = await wallet(account).writeContract({
+    ...request,
+    maxFeePerGas: 500_000_000n,        // 0.5 gwei
+    maxPriorityFeePerGas: 1_000_000n,  // 0.001 gwei
+  } as never);
   await pub.waitForTransactionReceipt({ hash });
   return hash;
 }

@@ -27,7 +27,10 @@ export default function DaoPage() {
     try {
       const s = await getStats();
       setStats(s);
-      setProps(await getProposals(s.count));
+      const all = await getProposals(s.count);
+      // Hide closed proposals that never drew a single vote — they're noise, not decisions.
+      const now = Math.floor(Date.now() / 1000);
+      setProps(all.filter((p) => p.votesFor + p.votesAgainst > 0n || now <= p.deadline || p.executed));
       if (account) setPower(await powerOf(account));
     } catch { /* contract not set yet */ }
   }, [account]);

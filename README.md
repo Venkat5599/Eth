@@ -1,114 +1,83 @@
-# 🐍 Cobra
+# ◆ Grants DAO
 
-**The AI that gets LATAM freelancers paid — then pays them early.**
+**A fully on-chain grants treasury on Arbitrum Stylus. No backend, no admin keys on the money.**
 
-`cobrar` (es.) = *to get paid / to collect.* Cobra is an autonomous AI collections agent
-for the 30M+ Latin American freelancers who earn in dollars from global clients. It chases
-the invoice, settles in stablecoins, files the local tax doc — and because it learns which
-clients actually pay, it can **advance you the cash today** on invoices clients haven't paid yet.
+Members propose grants, the community votes by weight, and once a proposal clears majority and
+quorum, **anyone** can execute the payout — the contract sends the grant straight from the
+treasury. Proposals, votes, quorum, and payouts all live on-chain and are verifiable on Arbiscan.
 
-> Built for **Ethereum México 2026** (AI × Blockchain, w/ Bitso) 
+> Built for **Ethereum México 2026** (Arbitrum / Stylus track).
 
 ---
 
-## Why this exists
+## Why it's different
 
-A LATAM dev invoices a US startup for $3,000. Today they:
-- lose **5–10%** to PayPal / banks / FX,
-- wait **days** for the wire,
-- fight **tax compliance** (MX requires monthly reporting > ~$750; 73% of businesses report
-  stablecoin-tax pain),
-- and — worst — *chase a client who ghosts the invoice.*
+- **Non-custodial governance** — no admin key can move the treasury. Funds leave only when a
+  proposal passes the on-chain vote. The vote is the only key to the money.
+- **No backend** — the frontend reads chain state from a public RPC and writes through the
+  user's own wallet. There's no server to trust, rate-limit, or take down.
+- **Stylus deep tech** — the entire DAO is one Rust→WASM contract on Arbitrum, not Solidity.
 
-Cobra removes all four. FX is a rounding error on stablecoin rails; the AI agent does the
-chasing; the tax doc generates itself; and settlement lands as pesos in a real bank via Bitso.
+## How it works
 
-## The moat
+| Step | What happens |
+|------|--------------|
+| **Propose** | A member opens a grant: recipient, ETH amount, description. On-chain instantly. |
+| **Vote** | Members vote for/against, weighted by their voting power. One ballot each, inside a fixed window. |
+| **Quorum** | A proposal passes only if `for > against` **and** `for ≥ quorum`. Enforced in the contract. |
+| **Execute** | After voting closes, anyone triggers the payout. The treasury pays via `transfer_eth`. |
 
-Every invoice Cobra works teaches it **which global clients pay, how fast, how reliably** —
-a private **client-payment-reputation graph** no competitor can buy. That graph powers the
-real business: **instant invoice advances (factoring)**, priced by data nobody else has.
-Own the flow → unlock credit. Compounds with every user.
+## Live
 
-## Architecture
+- **App:** https://app-tau-three-38.vercel.app  ·  **DAO:** `/dao`
+- **Contract (Stylus, Arbitrum Sepolia):** [`0xd082835164c1f83110a7efa1097edac998988f72`](https://sepolia.arbiscan.io/address/0xd082835164c1f83110a7efa1097edac998988f72)
+- **Verified end-to-end on-chain:** propose → vote → execute pays the grant from the treasury
+  ([example payout tx](https://sepolia.arbiscan.io/tx/0x13d0b47c9d80a881ab37faee98127761a73aa2d92e1a4338a87be74b7cb8cfc5)).
 
-```
-App (Next.js)  ── invoice · escrow · advance · dashboard
-        │
-Stylus contracts (Rust→WASM, Arbitrum)        ── the deep tech
-   EscrowVault     fund / conditional-release / refund-on-timeout
-   AdvancePool     risk-priced factoring; pays freelancer now, collects later
-   CreditVerifier  Groth16 verifier — gates every advance on a zk credit proof
-        │
-Reputation engine (VPS)
-   receivables graph → Merkle-committed; root anchored onchain per epoch
-   zk-proof: "score(client) ≥ T" — proves creditworthiness, reveals nothing
-        │
-AI collections agent (Bun, 24/7 on VPS)
-   monitor → draft nudge → send → negotiate → escalate → settle
-   Claude for language; the contract for money (clean security boundary)
-        │
-Rails:  USDC pay-in (Base) · MXNe swap (Etherfuse) · SPEI off-ramp (Bitso)
-```
+## Try it
 
-**Security boundary:** the LLM can draft and send messages freely, but it can never move
-value directly — every money move passes an on-chain Stylus guardrail. Non-custodial autonomy.
+1. Open `/dao`, **Connect wallet** (MetaMask auto-adds Arbitrum Sepolia).
+2. The owner can grant voting power to members; anyone can **deposit** ETH to the treasury.
+3. A member **proposes** a grant → members **vote** → after the window, **execute** the payout.
 
-## Why Stylus
-
-The `CreditVerifier` runs Groth16 pairing math. On Stylus (Rust→WASM) this is **10–100×
-cheaper** than an equivalent Solidity verifier — the exact workload Stylus exists for.
-This is what lets credit decisions be *verifiable but not reverse-engineerable* — proving a
-client is creditworthy without leaking the private graph that is the moat.
-
-## Chains
-
-| Leg | Chain |
-|-----|-------|
-| Pay-in (USDC, x402-native) | Base Sepolia |
-| Escrow · Advance · CreditVerifier | Arbitrum Sepolia (Stylus) |
-| Reputation root anchor | Ethereum (Sepolia) |
-
-## Monorepo layout
+## Repo layout
 
 ```
-contracts/   Stylus contracts (Rust)         — EscrowVault, AdvancePool, CreditVerifier
-circuits/    Circom credit circuit + Groth16  — proves score(client) ≥ T
-agent/       Bun AI collections agent          — autonomous receivables loop
-app/         Next.js frontend                  — invoice / advance / dashboard
-scripts/     deploy + demo orchestration
-docs/        pitch, economics, demo script
+contracts/dao/   Stylus DAO contract (Rust→WASM) — treasury, proposals, weighted voting,
+                 quorum, execution. The whole system is here.
+app/             Next.js frontend — landing + /dao (wallet-connect, reads/writes on-chain).
+                 lib/dao.ts is the entire on-chain client. No backend.
 ```
 
-## Quick start
+## Contract — `GrantsDao`
+
+- `init(voting_period, quorum)` — one-time setup.
+- `grant_power(member, amount)` — owner grants voting weight (membership).
+- `deposit()` *(payable)* — anyone funds the treasury.
+- `propose(recipient, amount, description) -> id` — members only.
+- `vote(id, support)` — weighted, one vote per member, within the window.
+- `execute(id)` — after the window; pays the grant if it passed quorum + majority.
+- Views: `treasury`, `proposalCount`, `proposal(id)`, `powerOf`, `totalPower`, `quorum`, `hasVoted`.
+
+Selectors are camelCase on-chain (Stylus convention) — see `app/lib/dao.ts` for the ABI.
+
+## Build & deploy the contract
 
 ```bash
-# 1. contracts
-cd contracts && cargo stylus check && cargo stylus deploy --endpoint $ARB_SEPOLIA_RPC
-
-# 2. circuit (credit proof)
-cd circuits && bash build.sh        # compiles circom, runs trusted setup, exports verifier
-
-# 3. agent
-cd agent && bun install && bun run dev
-
-# 4. app
-cd app && bun install && bun run dev
+cd contracts/dao
+cargo stylus check  --endpoint $ARB_SEPOLIA_RPC
+cargo stylus deploy --endpoint $ARB_SEPOLIA_RPC --private-key $PRIVATE_KEY
+# then init(voting_period, quorum), grant_power(...), and deposit(...) to seed it
 ```
 
-See `.env.example` for required keys.
+## Run the frontend
 
-## Revenue
-
-1. **$9/mo** subscription
-2. **FX spread** on USD↔MXNe
-3. **Collections success fee** (% of recovered invoices)
-4. **Factoring margin** on advances — the big one, fueled by the proprietary client graph
-
-## Bounties targeted
-
-Bitso Business · Etherfuse (MXNe) · Arbitrum (Best Agentic, Stylus) · x402.
+```bash
+cd app && bun install
+# set NEXT_PUBLIC_DAO_ADDRESS + NEXT_PUBLIC_ARB_RPC (see .env.example)
+bun run dev      # http://localhost:3000
+```
 
 ---
 
-*Status: hackathon build. Testnet only. Some rails run in sandbox/mock — labeled in the demo.*
+*Status: hackathon build. Testnet only (Arbitrum Sepolia).*
