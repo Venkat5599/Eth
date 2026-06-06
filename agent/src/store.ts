@@ -1,27 +1,39 @@
 // Tiny JSON-file store + the client reputation graph.
 // Self-contained so the demo runs without a deployed contract or DB.
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Invoice, ClientRep } from "./types";
 
 // fileURLToPath handles Windows drive letters correctly (URL.pathname does not).
 const DB = fileURLToPath(new URL("../data/state.json", import.meta.url));
+const EMPTY: State = { invoices: [], reputation: {} };
 
 interface State {
   invoices: Invoice[];
   reputation: Record<string, ClientRep>;
 }
 
+// Tolerate a corrupt/half-written state file (e.g. after an OOM kill mid-write) so the
+// agent never crash-loops on bad JSON — it just starts fresh and re-seeds.
 function load(): State {
-  if (!existsSync(DB)) return { invoices: [], reputation: {} };
-  return JSON.parse(readFileSync(DB, "utf8"));
+  if (!existsSync(DB)) return { ...EMPTY };
+  try {
+    return JSON.parse(readFileSync(DB, "utf8"));
+  } catch {
+    console.error("[store] state.json unreadable — starting from empty state");
+    return { ...EMPTY };
+  }
 }
 
+// Atomic write: write to a temp file then rename (rename is atomic on the same fs), so a
+// crash mid-write can never leave a truncated state.json.
 function save(s: State) {
   mkdirSync(dirname(DB), { recursive: true });
-  writeFileSync(DB, JSON.stringify(s, null, 2));
+  const tmp = `${DB}.tmp`;
+  writeFileSync(tmp, JSON.stringify(s, null, 2));
+  renameSync(tmp, DB);
 }
 
 export const store = {

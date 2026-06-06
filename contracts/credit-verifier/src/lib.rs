@@ -155,11 +155,33 @@ mod bridge_test {
         println!("on_curve: a={} c={} alpha={}", a.is_on_curve(), c.is_on_curve(), alpha.is_on_curve());
         println!("g2 b asis on_curve={}", g2(&pj["pi_b"], false).is_on_curve());
         println!("g2 b swap on_curve={}", g2(&pj["pi_b"], true).is_on_curve());
+        let pubs: Vec<String> =
+            serde_json::from_str(&fs::read_to_string("/tmp/public.json").unwrap()).unwrap();
+        let ic_len = vj["IC"].as_array().unwrap().len();
+        println!("ic_len={ic_len} pubs_len={}", pubs.len());
         // r = negate A
         for (s, r) in [(false, false), (false, true), (true, false), (true, true)] {
             match build(s, r) {
                 Ok(v) => println!("swap={s} negA={r} => Ok({v})"),
                 Err(e) => println!("swap={s} negA={r} => Err({e})"),
+            }
+        }
+        // unprocessed verify path (swap=false, no negA)
+        {
+            let a = g1(&pj["pi_a"]);
+            let proof = Proof::<Bn254> { a, b: g2(&pj["pi_b"], false), c: g1(&pj["pi_c"]) };
+            let ic: Vec<G1Affine> = vj["IC"].as_array().unwrap().iter().map(g1).collect();
+            let vk = VerifyingKey::<Bn254> {
+                alpha_g1: g1(&vj["vk_alpha_1"]),
+                beta_g2: g2(&vj["vk_beta_2"], false),
+                gamma_g2: g2(&vj["vk_gamma_2"], false),
+                delta_g2: g2(&vj["vk_delta_2"], false),
+                gamma_abc_g1: ic,
+            };
+            let inputs: Vec<Fr> = pubs.iter().map(|s| fr(s)).collect();
+            match Groth16::<Bn254>::verify(&vk, &inputs, &proof) {
+                Ok(v) => println!("UNPROCESSED verify => Ok({v})"),
+                Err(e) => println!("UNPROCESSED verify => Err({e:?})"),
             }
         }
     }
