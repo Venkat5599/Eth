@@ -35,11 +35,12 @@ const P: U256 = U256::from_limbs([
     0x30644e72e131a029,
 ]);
 
-fn precompile(addr: u8, input: &[u8]) -> Result<Vec<u8>, Vec<u8>> {
+fn precompile(addr: u8, input: &[u8], gas: u64) -> Result<Vec<u8>, Vec<u8>> {
     let mut a = [0u8; 20];
     a[19] = addr;
     unsafe {
         RawCall::new_static()
+            .gas(gas)
             .call(Address::from(a), input)
             .map_err(|_| b"precompile call failed".to_vec())
     }
@@ -55,7 +56,7 @@ fn ec_mul(px: U256, py: U256, s: U256) -> Result<(U256, U256), Vec<u8>> {
     input.extend_from_slice(&w(px));
     input.extend_from_slice(&w(py));
     input.extend_from_slice(&w(s));
-    let out = precompile(7, &input)?;
+    let out = precompile(7, &input, 80_000)?;
     if out.len() != 64 {
         return Err(b"ecMul bad output".to_vec());
     }
@@ -71,7 +72,7 @@ fn ec_add(ax: U256, ay: U256, bx: U256, by: U256) -> Result<(U256, U256), Vec<u8
     for v in [ax, ay, bx, by] {
         input.extend_from_slice(&w(v));
     }
-    let out = precompile(6, &input)?;
+    let out = precompile(6, &input, 80_000)?;
     if out.len() != 64 {
         return Err(b"ecAdd bad output".to_vec());
     }
@@ -138,7 +139,7 @@ impl CreditVerifier {
         push_g1(c_x, c_y, &mut pin);
         push_g2(key.delta, &mut pin);
 
-        let out = precompile(8, &pin)?;
+        let out = precompile(8, &pin, 500_000)?;
         // ecPairing returns 32 bytes: 1 if the pairing product is identity
         Ok(out.len() == 32 && U256::from_be_slice(&out) == U256::from(1))
     }
