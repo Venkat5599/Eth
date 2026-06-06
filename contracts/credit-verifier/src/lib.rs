@@ -120,10 +120,12 @@ mod bridge_test {
         let pubs: Vec<String> =
             serde_json::from_str(&fs::read_to_string("/tmp/public.json").unwrap()).unwrap();
 
+        let a0 = g1(&pj["pi_a"]);
+        let c0 = g1(&pj["pi_c"]);
         let proof = Proof::<Bn254> {
-            a: g1(&pj["pi_a"]),
+            a: if rev_inputs { -a0 } else { a0 }, // reuse rev_inputs flag as "negate A"
             b: g2(&pj["pi_b"], swap),
-            c: g1(&pj["pi_c"]),
+            c: c0,
         };
         let ic: Vec<G1Affine> = vj["IC"].as_array().unwrap().iter().map(g1).collect();
         let vk = VerifyingKey::<Bn254> {
@@ -134,8 +136,7 @@ mod bridge_test {
             gamma_abc_g1: ic,
         };
         let pvk = prepare_verifying_key(&vk);
-        let mut inputs: Vec<Fr> = pubs.iter().map(|s| fr(s)).collect();
-        if rev_inputs { inputs.reverse(); }
+        let inputs: Vec<Fr> = pubs.iter().map(|s| fr(s)).collect();
         Groth16::<Bn254>::verify_with_processed_vk(&pvk, &inputs, &proof)
             .map_err(|e| alloc::format!("{e:?}"))
     }
@@ -154,10 +155,11 @@ mod bridge_test {
         println!("on_curve: a={} c={} alpha={}", a.is_on_curve(), c.is_on_curve(), alpha.is_on_curve());
         println!("g2 b asis on_curve={}", g2(&pj["pi_b"], false).is_on_curve());
         println!("g2 b swap on_curve={}", g2(&pj["pi_b"], true).is_on_curve());
-        for (s, r) in [(false, false), (true, false), (false, true), (true, true)] {
+        // r = negate A
+        for (s, r) in [(false, false), (false, true), (true, false), (true, true)] {
             match build(s, r) {
-                Ok(v) => println!("swap={s} rev_inputs={r} => Ok({v})"),
-                Err(e) => println!("swap={s} rev_inputs={r} => Err({e:?})"),
+                Ok(v) => println!("swap={s} negA={r} => Ok({v})"),
+                Err(e) => println!("swap={s} negA={r} => Err({e})"),
             }
         }
     }
