@@ -1,19 +1,25 @@
-// zk credit proof generation. Builds the witness from the reputation graph, runs Groth16
-// (snarkjs) against the compiled circuit, and encodes the proof into the 256-byte calldata
-// the Stylus CreditVerifier expects.
+// zk credit proof generation. Builds the witness from the reputation graph (Bun), then runs
+// Groth16 in a Node subprocess (snarkjs crashes under Bun's worker polyfill), and encodes the
+// proof into the 256-byte calldata the Stylus CreditVerifier expects.
 //
 // Artifacts come from circuits/build/ (produced by circuits/build.sh on Linux). If they are
 // missing — e.g. the circuit hasn't been built yet — generateCreditProof returns null and
 // the agent falls back to the off-chain score gate so the demo still runs.
 
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-// @ts-ignore - snarkjs ships no types
-import * as snarkjs from "snarkjs";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { buildTreeAndProof, type Leaf } from "./merkle";
 
-const WASM = fileURLToPath(new URL("../../circuits/build/credit_js/credit.wasm", import.meta.url));
-const ZKEY = fileURLToPath(new URL("../../circuits/build/credit_final.zkey", import.meta.url));
+const execFileAsync = promisify(execFile);
+
+const CIRCUITS = fileURLToPath(new URL("../../circuits/", import.meta.url));
+const WASM = join(CIRCUITS, "build/credit_js/credit.wasm");
+const ZKEY = join(CIRCUITS, "build/credit_final.zkey");
+const PROVER = fileURLToPath(new URL("../prove.mjs", import.meta.url)); // agent/prove.mjs (Node)
 
 export const circuitReady = () => existsSync(WASM) && existsSync(ZKEY);
 
@@ -46,23 +52,36 @@ export async function generateCreditProof(
     pathIndices: mp.pathIndices.map(String),
   };
 
-  const { proof, publicSignals } = await snarkjs.groth16.fullProve(input, WASM, ZKEY);
+  // Prove in a Node subprocess (Bun + snarkjs workers crash).
+  const dir = mkdtempSync(join(tmpdir(), "cobra-proof-"));
+  const inputPath = join(dir, "input.json");
+  try {
+    writeFileSync(inputPath, JSON.stringify(input));
+    const { stdout } = await execFileAsync("node", [PROVER, inputPath, WASM, ZKEY], {
+      maxBuffer: 16 * 1024 * 1024,
+    });
+    const { proof, publicSignals } = JSON.parse(stdout) as {
+      proof: { pi_a: string[]; pi_b: string[][]; pi_c: string[] };
+      publicSignals: string[];
+    };
 
-  // snarkjs stores G2 as [c0, c1]; ark Fq2::new(c0, c1) — no swap. See gen-vk.mjs.
-  const proofBytes =
-    ("0x" +
-      word(proof.pi_a[0]) +
-      word(proof.pi_a[1]) +
-      word(proof.pi_b[0][0]) +
-      word(proof.pi_b[0][1]) +
-      word(proof.pi_b[1][0]) +
-      word(proof.pi_b[1][1]) +
-      word(proof.pi_c[0]) +
-      word(proof.pi_c[1])) as `0x${string}`;
+    // snarkjs stores G2 as [c0, c1]; ark Fq2::new(c0, c1) — no swap. See gen-vk.mjs.
+    const proofBytes =
+      ("0x" +
+        word(proof.pi_a[0]) +
+        word(proof.pi_a[1]) +
+        word(proof.pi_b[0][0]) +
+        word(proof.pi_b[0][1]) +
+        word(proof.pi_b[1][0]) +
+        word(proof.pi_b[1][1]) +
+        word(proof.pi_c[0]) +
+        word(proof.pi_c[1])) as `0x${string}`;
 
-  // publicSignals order matches the circuit's public[] declaration:
-  // [root, threshold, clientCommitment, epoch]
-  const publicInputs = (publicSignals as string[]).map((s) => BigInt(s));
-
-  return { proofBytes, publicInputs };
+    // publicSignals order matches the circuit's public[] declaration:
+    // [root, threshold, clientCommitment, epoch]
+    const publicInputs = publicSignals.map((s) => BigInt(s));
+    return { proofBytes, publicInputs };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
