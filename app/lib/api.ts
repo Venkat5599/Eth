@@ -11,7 +11,7 @@ export interface Nudge {
 }
 export interface Settlement {
   at: string; usdcReceived: number; mxneConverted: number;
-  pesosOfframped: number; fxRate: number; taxDocId: string; txHash?: string;
+  pesosOfframped: number; fxRate: number; taxDocId: string; txHash?: string; speiRef?: string;
 }
 export interface Invoice {
   id: string; freelancer: string; clientName: string; clientEmail: string;
@@ -38,6 +38,12 @@ export const api = {
   invoices: () => j<Invoice[]>("/invoices"),
   reputation: () => j<ClientRep[]>("/reputation"),
   pay: (id: string) => j<Invoice>(`/invoices/${id}/pay`, { method: "POST" }),
+  // x402 pay-in: first call returns 402 + requirements; retry with an X-PAYMENT header.
+  payin: (id: string, paymentHeader?: string) =>
+    j<Invoice>(`/invoices/${id}/payin`, {
+      method: "POST",
+      headers: paymentHeader ? { "x-payment": paymentHeader } : {},
+    }),
   advance: (id: string) =>
     j<{ ok?: boolean; advanceUsd?: number; score: number; fee?: number; threshold?: number; error?: string }>(
       `/invoices/${id}/advance`,

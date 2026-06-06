@@ -12,6 +12,7 @@ import {
   CheckCircle,
   XCircle,
   CurrencyDollar,
+  Plus,
 } from "@phosphor-icons/react";
 import { api, SEED, type Invoice, type ClientRep } from "@/lib/api";
 
@@ -80,6 +81,23 @@ export default function Page() {
     refresh();
   };
 
+  const onCreate = async (b: { clientName: string; amountUsd: number; clientEmail?: string }) => {
+    try {
+      const inv = await api.create(b);
+      pushEvent({
+        id: crypto.randomUUID(),
+        icon: "mail",
+        title: `Invoice raised for ${b.clientName}`,
+        sub: `${usd(b.amountUsd)} · agent will start chasing it`,
+      });
+      setInvoices((p) => [inv, ...p.filter((i) => i.id !== inv.id)]);
+    } catch {
+      setFlash({ ok: false, text: "Agent offline — start it to raise live invoices." });
+      setTimeout(() => setFlash(null), 4200);
+    }
+    refresh();
+  };
+
   const onPay = async (inv: Invoice) => {
     try {
       const settled = await api.pay(inv.id);
@@ -116,6 +134,7 @@ export default function Page() {
         <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[1.35fr_1fr]">
           <section>
             <SectionLabel icon={<Receipt size={15} weight="bold" />}>Receivables</SectionLabel>
+            <NewInvoice onCreate={onCreate} />
             <div className="mt-3 flex flex-col gap-3">
               {invoices.map((inv) => (
                 <InvoiceCard
@@ -232,6 +251,76 @@ function Stats({ outstanding, advanced, settled }: { outstanding: number; advanc
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function NewInvoice({
+  onCreate,
+}: {
+  onCreate: (b: { clientName: string; amountUsd: number; clientEmail?: string }) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [clientName, setClientName] = useState("");
+  const [amount, setAmount] = useState("");
+  const [email, setEmail] = useState("");
+
+  const submit = () => {
+    const amt = Number(amount);
+    if (!clientName.trim() || !amt) return;
+    onCreate({ clientName: clientName.trim(), amountUsd: amt, clientEmail: email.trim() || undefined });
+    setClientName(""); setAmount(""); setEmail(""); setOpen(false);
+  };
+
+  if (!open)
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-[14px] border border-dashed border-border-strong py-3 text-[13px] text-text-dim transition hover:text-text"
+      >
+        <Plus size={15} weight="bold" /> Raise an invoice
+      </button>
+    );
+
+  return (
+    <div className="mt-3 rounded-[14px] border border-border bg-surface p-4">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[1.4fr_1fr]">
+        <input
+          autoFocus
+          value={clientName}
+          onChange={(e) => setClientName(e.target.value)}
+          placeholder="Client name"
+          className="rounded-[10px] border border-border bg-surface-2 px-3 py-2 text-[13px] outline-none focus:border-border-strong"
+        />
+        <input
+          value={amount}
+          onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+          inputMode="decimal"
+          placeholder="Amount (USD)"
+          className="nums rounded-[10px] border border-border bg-surface-2 px-3 py-2 text-[13px] outline-none focus:border-border-strong"
+        />
+      </div>
+      <input
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Client email (optional)"
+        className="mt-2.5 w-full rounded-[10px] border border-border bg-surface-2 px-3 py-2 text-[13px] outline-none focus:border-border-strong"
+      />
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          onClick={submit}
+          className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-medium transition active:translate-y-px"
+          style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+        >
+          <Plus size={14} weight="bold" /> Raise invoice
+        </button>
+        <button
+          onClick={() => setOpen(false)}
+          className="rounded-full border border-border-strong px-3.5 py-2 text-[13px] text-text-dim transition hover:text-text"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }

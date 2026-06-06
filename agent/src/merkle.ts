@@ -37,6 +37,11 @@ export function clientCommitment(clientId: string): bigint {
 const h2 = (po: Poseidon, a: bigint, b: bigint): bigint =>
   BigInt(po.F.toString(po.F.e(po.F.toObject(po([a, b])))));
 
+// Poseidon(left, right) — exported for tests that recompute a root from a proof path.
+export async function hashPair(a: bigint, b: bigint): Promise<bigint> {
+  return h2(await poseidon(), a, b);
+}
+
 const h3 = (po: Poseidon, a: bigint, b: bigint, c: bigint): bigint =>
   BigInt(po.F.toString(po.F.e(po.F.toObject(po([a, b, c])))));
 

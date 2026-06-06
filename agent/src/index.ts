@@ -14,6 +14,7 @@ import { sendNudge, settle } from "./rails";
 import { chain, chainEnabled } from "./chain";
 import { generateCreditProof, circuitReady } from "./proof";
 import { currentEpoch, buildRoot } from "./merkle";
+import { paymentRequired, verifyPayment } from "./x402";
 import type { Invoice } from "./types";
 
 const POLL = Number(process.env.AGENT_POLL_SECONDS ?? 20) * 1000;
@@ -107,7 +108,7 @@ const server = Bun.serve({
         headers: {
           "access-control-allow-origin": "*",
           "access-control-allow-methods": "GET,POST,OPTIONS",
-          "access-control-allow-headers": "content-type",
+          "access-control-allow-headers": "content-type,x-payment",
         },
       });
 
@@ -209,6 +210,19 @@ const server = Bun.serve({
       inv.status = "advanced";
       store.upsert(inv);
       return json({ ok: true, advanceUsd, score, fee, proof: false });
+    }
+
+    // x402-native pay-in: client settles the invoice in USDC over HTTP 402.
+    const payin = pathname.match(/^\/invoices\/([^/]+)\/payin$/);
+    if (payin && req.method === "POST") {
+      const inv = store.get(payin[1]);
+      if (!inv) return json({ error: "not found" }, 404);
+      const header = req.headers.get("x-payment") ?? "";
+      if (!header) return json(paymentRequired(inv), 402);
+      const ok = await verifyPayment(header, inv);
+      if (!ok) return json({ error: "payment invalid" }, 402);
+      const settled = await onClientPaid(inv); // funded -> settle
+      return json(settled);
     }
 
     // simulate the client funding the escrow -> settle

@@ -43,6 +43,7 @@ export interface Settlement {
   fxRate: number;           // MXN per USD
   taxDocId: string;         // generated CFDI / monthly-report id
   txHash?: string;
+  speiRef?: string;         // Bitso SPEI withdrawal reference (when rails live)
 }
 
 // Client payment reputation — the proprietary graph that powers advances.
