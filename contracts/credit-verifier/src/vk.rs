@@ -1,83 +1,46 @@
-//! Embedded Groth16 verifying key for the Cobra credit circuit.
+//! Embedded Groth16 verifying key (precompile layout: G2 as [x.c1, x.c0, y.c1, y.c0]).
 //!
-//! ⚠️  THIS IS A STUB. Regenerate after building the circuit:
-//!        cd circuits && bash build.sh                 # -> build/verification_key.json
-//!        node circuits/gen-vk.mjs > contracts/credit-verifier/src/vk.rs
-//!
-//! The stub returns the curve generators, so `verify` always returns Ok(false) — it never
-//! falsely approves an advance. The real key (printed by gen-vk.mjs) carries the circuit's
-//! actual alpha/beta/gamma/delta and the 5 IC points (4 public signals + 1).
+//! ⚠️ STUB — regenerate from the circuit:
+//!     cd circuits && bash build.sh        # runs gen-vk.mjs -> this file
+//! The stub uses the curve generators, so the pairing never satisfies the Groth16 equation
+//! and `verify` returns false — it can never falsely approve an advance.
 
-use ark_bn254::{Fq, Fq2, G1Affine, G2Affine};
-use ark_ec::AffineRepr;
-use ark_ff::PrimeField;
-use ark_groth16::VerifyingKey;
-use ark_bn254::Bn254;
+use alloy_primitives::U256;
 use alloc::vec::Vec;
-use alloc::vec;
 
-/// Build an Fq from a big-endian hex string (no 0x), reducing mod p.
-#[allow(dead_code)]
-fn fq(hex: &str) -> Fq {
-    Fq::from_be_bytes_mod_order(&decode_hex(hex))
+pub struct Vk {
+    pub alpha: [U256; 2],  // G1
+    pub beta: [U256; 4],   // G2 (c1,c0 order)
+    pub gamma: [U256; 4],
+    pub delta: [U256; 4],
+    pub ic: Vec<[U256; 2]>, // G1[]
 }
 
-#[allow(dead_code)]
-fn g1(x: &str, y: &str) -> G1Affine {
-    G1Affine::new_unchecked(fq(x), fq(y))
+#[inline]
+fn u(s: &str) -> U256 {
+    U256::from_str_radix(s, 10).unwrap()
 }
 
-#[allow(dead_code)]
-fn g2(x0: &str, x1: &str, y0: &str, y1: &str) -> G2Affine {
-    G2Affine::new_unchecked(Fq2::new(fq(x0), fq(x1)), Fq2::new(fq(y0), fq(y1)))
-}
-
-#[allow(dead_code)]
-fn decode_hex(s: &str) -> Vec<u8> {
-    let s = s.strip_prefix("0x").unwrap_or(s);
-    let s = if s.len() % 2 == 1 {
-        // pad odd-length
-        let mut t = alloc::string::String::from("0");
-        t.push_str(s);
-        t
-    } else {
-        alloc::string::String::from(s)
-    };
-    let bytes = s.as_bytes();
-    let mut out = Vec::with_capacity(bytes.len() / 2);
-    let h = |c: u8| -> u8 {
-        match c {
-            b'0'..=b'9' => c - b'0',
-            b'a'..=b'f' => c - b'a' + 10,
-            b'A'..=b'F' => c - b'A' + 10,
-            _ => 0,
-        }
-    };
-    let mut i = 0;
-    while i + 1 < bytes.len() || i + 1 == bytes.len() {
-        if i + 1 >= bytes.len() {
-            break;
-        }
-        out.push((h(bytes[i]) << 4) | h(bytes[i + 1]));
-        i += 2;
-    }
-    out
-}
-
-/// The verifying key. STUB: generators only (verify -> false). Regenerate for real proofs.
-pub fn verifying_key() -> VerifyingKey<Bn254> {
-    VerifyingKey {
-        alpha_g1: G1Affine::generator(),
-        beta_g2: G2Affine::generator(),
-        gamma_g2: G2Affine::generator(),
-        delta_g2: G2Affine::generator(),
-        // 4 public signals (root, threshold, clientCommitment, epoch) + 1
-        gamma_abc_g1: vec![
-            G1Affine::generator(),
-            G1Affine::generator(),
-            G1Affine::generator(),
-            G1Affine::generator(),
-            G1Affine::generator(),
+pub fn verifying_key() -> Vk {
+    // BN254 G2 generator in precompile (c1, c0) order.
+    let g2 = [
+        u("11559732032986387107991004021392285783925812861821192530917403151452391805634"),
+        u("10857046999023057135944570762232829481370756359578518086990519993285655852781"),
+        u("4082367875863433681332203403145435568316851327593401208105741076214120093531"),
+        u("8495653923123431417604973247489272438418190587263600148770280649306958101930"),
+    ];
+    Vk {
+        alpha: [u("1"), u("2")], // G1 generator
+        beta: g2,
+        gamma: g2,
+        delta: g2,
+        // 4 public signals + 1
+        ic: alloc::vec![
+            [u("1"), u("2")],
+            [u("1"), u("2")],
+            [u("1"), u("2")],
+            [u("1"), u("2")],
+            [u("1"), u("2")],
         ],
     }
 }
