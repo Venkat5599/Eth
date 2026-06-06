@@ -18,7 +18,14 @@ RPC="${ARB_SEPOLIA_RPC:-https://sepolia-rollup.arbitrum.io/rpc}"
 
 echo "==> system deps"
 apt-get update -y
-apt-get install -y build-essential git curl pkg-config libssl-dev ufw unzip
+apt-get install -y build-essential git curl pkg-config libssl-dev ufw unzip nodejs npm
+
+echo "==> circom + snarkjs (zk toolchain)"
+command -v circom >/dev/null || {
+  curl -fsSL https://github.com/iden3/circom/releases/latest/download/circom-linux-amd64 -o /usr/local/bin/circom
+  chmod +x /usr/local/bin/circom
+}
+command -v snarkjs >/dev/null || npm i -g snarkjs
 
 echo "==> rust + wasm target + cargo-stylus"
 if ! command -v cargo >/dev/null; then
@@ -35,10 +42,20 @@ export PATH="$HOME/.bun/bin:$PATH"
 echo "==> clone / update repo"
 if [ -d "$APP_DIR/.git" ]; then git -C "$APP_DIR" pull --ff-only; else git clone "$REPO" "$APP_DIR"; fi
 
-echo "==> deploy Stylus contract to Arbitrum Sepolia"
+echo "==> build the credit circuit (embeds the real verifying key into the Stylus verifier)"
+cd "$APP_DIR/circuits"
+bash build.sh
+
+echo "==> deploy CreditVerifier (Stylus) to Arbitrum Sepolia"
 cd "$APP_DIR/contracts"
-cargo stylus check --endpoint "$RPC" || true
-DEPLOY_OUT=$(cargo stylus deploy --endpoint "$RPC" --private-key "$PRIVATE_KEY" --no-verify 2>&1 | tee /dev/stderr)
+cargo stylus check --manifest-path credit-verifier/Cargo.toml --endpoint "$RPC" || true
+VERIFIER_OUT=$(cargo stylus deploy --manifest-path credit-verifier/Cargo.toml --endpoint "$RPC" --private-key "$PRIVATE_KEY" --no-verify 2>&1 | tee /dev/stderr)
+VERIFIER_ADDR=$(echo "$VERIFIER_OUT" | grep -oiE '0x[0-9a-f]{40}' | tail -1)
+echo "==> CreditVerifier at: ${VERIFIER_ADDR:-DEPLOY_FAILED}"
+
+echo "==> deploy Cobra (Stylus) to Arbitrum Sepolia"
+cargo stylus check --manifest-path cobra/Cargo.toml --endpoint "$RPC" || true
+DEPLOY_OUT=$(cargo stylus deploy --manifest-path cobra/Cargo.toml --endpoint "$RPC" --private-key "$PRIVATE_KEY" --no-verify 2>&1 | tee /dev/stderr)
 COBRA_ADDR=$(echo "$DEPLOY_OUT" | grep -oiE '0x[0-9a-f]{40}' | tail -1)
 echo "==> deployed Cobra at: ${COBRA_ADDR:-DEPLOY_FAILED}"
 
@@ -47,6 +64,8 @@ cat > "$APP_DIR/agent/.env" <<EOF
 ARB_SEPOLIA_RPC=$RPC
 PRIVATE_KEY=$PRIVATE_KEY
 COBRA_CONTRACT=$COBRA_ADDR
+CREDIT_VERIFIER=$VERIFIER_ADDR
+USDC_TEST=${USDC_TEST:-0x0000000000000000000000000000000000000000}
 LLM_API_KEY=$LLM_API_KEY
 LLM_BASE_URL=${LLM_BASE_URL:-https://api.deepseek.com/v1}
 LLM_MODEL=${LLM_MODEL:-deepseek-chat}
@@ -57,6 +76,10 @@ echo "==> agent deps + seed"
 cd "$APP_DIR/agent"
 bun install
 bun run src/seed.ts
+
+echo "==> initialize contract + anchor first reputation root"
+set -a; . "$APP_DIR/agent/.env"; set +a
+bun run src/init-chain.ts || echo "init-chain failed (continue; can re-run later)"
 
 echo "==> systemd service (public on :8787)"
 BUN_BIN="$(command -v bun)"

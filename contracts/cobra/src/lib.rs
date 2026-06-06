@@ -52,6 +52,10 @@ sol_storage! {
         address usdc;            // USDC token (test token on Base/Arbitrum Sepolia)
         address credit_verifier; // ICreditVerifier
         uint256 next_id;
+        uint256 advance_threshold; // min credit score the proof must clear (public input[1])
+
+        // reputation graph commitment — root anchored per epoch (the moat, committed on-chain)
+        mapping(uint256 => uint256) epoch_root;   // epoch -> Merkle root
 
         // invoice fields, keyed by id
         mapping(uint256 => address) freelancer;
@@ -70,8 +74,15 @@ sol_storage! {
 
 #[public]
 impl Cobra {
-    /// One-time init. Sets token, verifier, and the factoring discount (bps fee).
-    pub fn init(&mut self, usdc: Address, credit_verifier: Address, advance_bps: U256) -> Result<(), Vec<u8>> {
+    /// One-time init. Sets token, verifier, the factoring discount (bps fee), and the
+    /// credit-score threshold every advance proof must clear.
+    pub fn init(
+        &mut self,
+        usdc: Address,
+        credit_verifier: Address,
+        advance_bps: U256,
+        advance_threshold: U256,
+    ) -> Result<(), Vec<u8>> {
         if self.owner.get() != Address::ZERO {
             return Err(b"already initialized".to_vec());
         }
@@ -79,7 +90,37 @@ impl Cobra {
         self.usdc.set(usdc);
         self.credit_verifier.set(credit_verifier);
         self.advance_bps.set(advance_bps);
+        self.advance_threshold.set(advance_threshold);
         self.next_id.set(U256::from(1));
+        Ok(())
+    }
+
+    /// Commit the reputation-graph Merkle root for an epoch. Only the owner (the agent)
+    /// anchors roots; advances are then bound to the anchored root for their epoch, so a
+    /// proof can't be replayed against a graph the operator never committed.
+    pub fn anchor_root(&mut self, epoch: U256, root: U256) -> Result<(), Vec<u8>> {
+        if msg::sender() != self.owner.get() {
+            return Err(b"only owner".to_vec());
+        }
+        self.epoch_root.setter(epoch).set(root);
+        Ok(())
+    }
+
+    /// LP withdraws from the factoring pool, up to their deposited share and available liquidity.
+    pub fn withdraw_liquidity(&mut self, amount: U256) -> Result<(), Vec<u8>> {
+        let share = self.pool_shares.getter(msg::sender()).get();
+        if amount > share {
+            return Err(b"exceeds your share".to_vec());
+        }
+        if amount > self.pool_liquidity.get() {
+            return Err(b"pool illiquid (capital out on advances)".to_vec());
+        }
+        self.pool_liquidity.set(self.pool_liquidity.get() - amount);
+        self.pool_shares.setter(msg::sender()).set(share - amount);
+        let usdc = IERC20::new(self.usdc.get());
+        let config = Call::new_in(self);
+        usdc.transfer(config, msg::sender(), amount)
+            .map_err(|_| b"withdraw payout failed".to_vec())?;
         Ok(())
     }
 
@@ -178,6 +219,21 @@ impl Cobra {
             return Err(b"only freelancer".to_vec());
         }
 
+        // ---- bind the public inputs before trusting the proof ----
+        // public_inputs = [root, threshold, clientCommitment, epoch]
+        if public_inputs.len() != 4 {
+            return Err(b"bad public input count".to_vec());
+        }
+        // threshold the proof clears must equal the configured minimum (can't prove score>=0)
+        if public_inputs[1] != self.advance_threshold.get() {
+            return Err(b"threshold mismatch".to_vec());
+        }
+        // root must be the one the operator anchored for that epoch (no replay vs stale graph)
+        let epoch = public_inputs[3];
+        if self.epoch_root.getter(epoch).get() != public_inputs[0] {
+            return Err(b"root not anchored for epoch".to_vec());
+        }
+
         // ---- the zk credit gate ----
         let verifier = ICreditVerifier::new(self.credit_verifier.get());
         let cfg = Call::new();
@@ -212,4 +268,72 @@ impl Cobra {
     pub fn invoice_amount(&self, id: U256) -> U256 { self.amount.getter(id).get() }
     pub fn pool(&self) -> U256 { self.pool_liquidity.get() }
     pub fn owner_addr(&self) -> Address { self.owner.get() }
+    pub fn root_at(&self, epoch: U256) -> U256 { self.epoch_root.getter(epoch).get() }
+    pub fn advance_threshold(&self) -> U256 { self.advance_threshold.get() }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use stylus_sdk::testing::*;
+
+    fn addr(n: u8) -> Address {
+        Address::from([n; 20])
+    }
+
+    #[test]
+    fn init_then_create_invoice() {
+        let vm = TestVM::default();
+        let mut c = Cobra::from(&vm);
+        c.init(addr(9), addr(8), U256::from(500), U256::from(65)).unwrap();
+        let id = c.create_invoice(addr(2), U256::from(3000), U256::from(0)).unwrap();
+        assert_eq!(id, U256::from(1));
+        assert_eq!(c.invoice_amount(id), U256::from(3000));
+        assert_eq!(c.invoice_status(id), 0u8); // Created
+        assert_eq!(c.advance_threshold(), U256::from(65));
+    }
+
+    #[test]
+    fn double_init_rejected() {
+        let vm = TestVM::default();
+        let mut c = Cobra::from(&vm);
+        c.init(addr(9), addr(8), U256::from(500), U256::from(65)).unwrap();
+        assert!(c.init(addr(1), addr(1), U256::from(1), U256::from(1)).is_err());
+    }
+
+    #[test]
+    fn create_invoice_zero_amount_rejected() {
+        let vm = TestVM::default();
+        let mut c = Cobra::from(&vm);
+        c.init(addr(9), addr(8), U256::from(500), U256::from(65)).unwrap();
+        assert!(c.create_invoice(addr(2), U256::ZERO, U256::from(0)).is_err());
+    }
+
+    #[test]
+    fn anchor_root_records_and_reads_back() {
+        let vm = TestVM::default();
+        let mut c = Cobra::from(&vm);
+        c.init(addr(9), addr(8), U256::from(500), U256::from(65)).unwrap();
+        c.anchor_root(U256::from(42), U256::from(123456)).unwrap();
+        assert_eq!(c.root_at(U256::from(42)), U256::from(123456));
+        assert_eq!(c.root_at(U256::from(7)), U256::ZERO);
+    }
+
+    #[test]
+    fn advance_requires_created_state() {
+        // an unknown invoice is not in Created state with a real amount -> rejected
+        let vm = TestVM::default();
+        let mut c = Cobra::from(&vm);
+        c.init(addr(9), addr(8), U256::from(500), U256::from(65)).unwrap();
+        let r = c.request_advance(U256::from(99), alloc::vec![].into(), alloc::vec![]);
+        assert!(r.is_err());
+    }
+
+    #[test]
+    fn withdraw_more_than_share_rejected() {
+        let vm = TestVM::default();
+        let mut c = Cobra::from(&vm);
+        c.init(addr(9), addr(8), U256::from(500), U256::from(65)).unwrap();
+        assert!(c.withdraw_liquidity(U256::from(1)).is_err()); // no shares deposited
+    }
 }

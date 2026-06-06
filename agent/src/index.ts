@@ -13,13 +13,29 @@ import { draftNudge } from "./llm";
 import { sendNudge, settle } from "./rails";
 import { chain, chainEnabled } from "./chain";
 import { generateCreditProof, circuitReady } from "./proof";
-import { currentEpoch } from "./merkle";
+import { currentEpoch, buildRoot } from "./merkle";
 import type { Invoice } from "./types";
 
 const POLL = Number(process.env.AGENT_POLL_SECONDS ?? 20) * 1000;
 const ADVANCE_FEE_BPS = 500;      // 5% factoring fee
 const ADVANCE_MIN_SCORE = 65;     // client must clear this to qualify
 const NUDGE_INTERVAL_MS = 15_000; // demo cadence; real build is daily
+
+// Commit the current reputation-graph Merkle root for this epoch on-chain. Advances are
+// bound to the anchored root, so this must run before any advance is verifiable. No-ops
+// when the chain isn't wired.
+async function anchorEpochRoot() {
+  if (!chainEnabled) return;
+  try {
+    const reputation = store.allReputation().map((r) => ({ clientId: r.clientId, score: r.score }));
+    const epoch = currentEpoch();
+    const root = await buildRoot(reputation, epoch);
+    const r = await chain.anchorRoot(epoch, root);
+    if (r) console.log(`[chain] anchored reputation root for epoch ${epoch} · ${r.url}`);
+  } catch (e) {
+    console.log(`[chain] anchor_root failed: ${(e as Error).message}`);
+  }
+}
 
 function overdue(inv: Invoice) {
   return Date.now() > new Date(inv.dueDate).getTime();
@@ -71,6 +87,7 @@ async function onClientPaid(inv: Invoice) {
   store.upsert(inv);
   const rep = store.recordOutcome(inv.clientId, inv.clientName, true, days);
   console.log(`[agent] ${inv.clientName} paid. client score -> ${rep.score}`);
+  await anchorEpochRoot(); // reputation changed -> re-anchor the epoch root
   return inv;
 }
 
@@ -208,5 +225,6 @@ const server = Bun.serve({
 });
 
 console.log(`🐍 Cobra agent live on :${server.port} — collections loop every ${POLL / 1000}s`);
+anchorEpochRoot(); // commit the reputation root for this epoch at boot
 setInterval(tick, POLL);
 tick();

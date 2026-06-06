@@ -24,6 +24,7 @@ const ABI = [
   { type: "function", name: "fund_escrow", stateMutability: "nonpayable", inputs: [{ name: "id", type: "uint256" }], outputs: [] },
   { type: "function", name: "release", stateMutability: "nonpayable", inputs: [{ name: "id", type: "uint256" }], outputs: [] },
   { type: "function", name: "request_advance", stateMutability: "nonpayable", inputs: [{ name: "id", type: "uint256" }, { name: "proof", type: "bytes" }, { name: "public_inputs", type: "uint256[]" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "anchor_root", stateMutability: "nonpayable", inputs: [{ name: "epoch", type: "uint256" }, { name: "root", type: "uint256" }], outputs: [] },
   { type: "function", name: "pool", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
 ] as const;
 
@@ -56,4 +57,5 @@ export const chain = {
   release: (id: bigint) => send("release", [id]),
   requestAdvance: (id: bigint, proof: `0x${string}`, publicInputs: bigint[]) =>
     send("request_advance", [id, proof, publicInputs]),
+  anchorRoot: (epoch: bigint, root: bigint) => send("anchor_root", [epoch, root]),
 };

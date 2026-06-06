@@ -53,6 +53,14 @@ export interface MerkleProof {
   pathIndices: number[]; // LEVELS bits: 0 => node is left, 1 => node is right
 }
 
+// Compute just the epoch root over the reputation graph (for on-chain anchoring).
+export async function buildRoot(leaves: Leaf[], epoch: bigint): Promise<bigint> {
+  if (leaves.length === 0) return 0n;
+  const sorted = [...leaves].sort((a, b) => a.clientId.localeCompare(b.clientId));
+  const mp = await buildTreeAndProof(sorted, sorted[0].clientId, epoch);
+  return mp.root;
+}
+
 // Build the full tree and return the root plus an inclusion proof for `targetClientId`.
 export async function buildTreeAndProof(
   leaves: Leaf[],
