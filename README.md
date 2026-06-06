@@ -145,6 +145,79 @@ Currency:    ETH (testnet)
 
 ---
 
+## 💻 How to use the contract
+
+### TypeScript / viem (browser wallet)
+
+```typescript
+import { createPublicClient, createWalletClient, custom, http, parseEther } from "viem";
+import { arbitrumSepolia } from "viem/chains";
+
+const DAO = "0x603cff6b0f7486074b4d15e1188476e30aaf4121";
+const ABI = [
+  "function join()",
+  "function propose(address recipient, uint256 amount, string description) returns (uint256)",
+  "function vote(uint256 id, bool support)",
+  "function execute(uint256 id)",
+  "function proposal(uint256 id) view returns (address,address,uint256,uint256,uint256,uint256,bool)",
+]; // full ABI object form in app/lib/dao.ts
+
+const pub = createPublicClient({ chain: arbitrumSepolia, transport: http() });
+const [account] = await window.ethereum.request({ method: "eth_requestAccounts" });
+const wallet = createWalletClient({ account, chain: arbitrumSepolia, transport: custom(window.ethereum) });
+
+// 1. Become a member (mints 3 GOV voting power)
+await wallet.writeContract({ address: DAO, abi: ABI, functionName: "join" });
+
+// 2. Propose a grant: 0.01 ETH to a recipient
+const id = await wallet.writeContract({
+  address: DAO, abi: ABI, functionName: "propose",
+  args: ["0xRecipient...", parseEther("0.01"), "Fund open-source tooling"],
+});
+
+// 3. Vote FOR
+await wallet.writeContract({ address: DAO, abi: ABI, functionName: "vote", args: [id, true] });
+
+// 4. After the voting window closes, anyone executes the payout
+await wallet.writeContract({ address: DAO, abi: ABI, functionName: "execute", args: [id] });
+```
+
+### Read state (no wallet needed)
+
+```typescript
+const [proposer, recipient, amount, deadline, votesFor, votesAgainst, executed] =
+  await pub.readContract({ address: DAO, abi: ABI, functionName: "proposal", args: [0n] });
+```
+
+---
+
+## 🧪 Demo flow
+
+```
+✅ join()            → member receives 3 GOV
+✅ propose(...)      → grant proposal created on-chain
+✅ vote(id, true)    → weighted vote recorded (one per member)
+✅ execute(id)       → treasury pays the grant   (after window, if quorum + majority)
+❌ execute too early → reverts ("voting still open")
+❌ execute if failed → reverts ("proposal did not pass" / "quorum not reached")
+```
+
+Verified live: a seeded proposal has **3 distinct voters** (owner + 2 members who each `join()`ed),
+and the propose→vote→execute payout has been confirmed on-chain.
+
+---
+
+## 🔗 Links
+
+| Resource | URL |
+|----------|-----|
+| **Live dApp** | https://app-tau-three-38.vercel.app/dao |
+| **Contract (Arbiscan)** | https://sepolia.arbiscan.io/address/0x603cff6b0f7486074b4d15e1188476e30aaf4121 |
+| **Repository** | https://github.com/Venkat5599/GrantsDAO |
+| **Arbitrum Sepolia faucet** | https://www.alchemy.com/faucets/arbitrum-sepolia |
+
+---
+
 ## 📁 Project structure
 
 ```
@@ -186,6 +259,20 @@ bun run dev      # http://localhost:3000  →  /dao
 - **Smart contract:** Rust → WASM on **Arbitrum Stylus**
 - **Frontend:** Next.js · viem · TailwindCSS · GSAP/Motion
 - **Chain:** Arbitrum Sepolia · **no backend** (reads RPC, writes via wallet)
+
+---
+
+## 📈 Roadmap
+
+- [x] Stylus contract deployed & activated on Arbitrum Sepolia
+- [x] Transferable GOV governance token (`join` / `transfer`)
+- [x] Weighted voting + quorum + on-chain execution
+- [x] Treasury deposits & automatic payouts
+- [x] Wallet-connect dApp (propose / vote / execute / join / transfer)
+- [x] Multi-voter activity verified on-chain
+- [ ] Snapshot-based voting power (ERC20Votes) to prevent transfer-then-revote
+- [ ] Time-locked execution + proposal cancellation
+- [ ] Mainnet deployment + security audit
 
 ---
 
