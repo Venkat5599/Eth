@@ -62,7 +62,7 @@ sol_storage! {
         mapping(uint256 => address) client;
         mapping(uint256 => uint256) amount;
         mapping(uint256 => uint256) due_date;     // unix seconds
-        mapping(uint256 => uint8)   status;
+        mapping(uint256 => uint256) status;
         mapping(uint256 => uint256) advanced_amt; // amount paid out as advance
 
         // factoring pool
@@ -136,7 +136,7 @@ impl Cobra {
         self.client.setter(id).set(client);
         self.amount.setter(id).set(amount);
         self.due_date.setter(id).set(due_date);
-        self.status.setter(id).set(0u8);
+        self.status.setter(id).set(U256::from(0));
         Ok(id)
     }
 
@@ -153,7 +153,7 @@ impl Cobra {
         usdc.transfer_from(config, msg::sender(), stylus_sdk::contract::address(), amount)
             .map_err(|_| b"usdc transferFrom failed".to_vec())?;
 
-        if st == 4u8 {
+        if st == U256::from(4) {
             // invoice was advanced: repay pool first, send remainder to freelancer.
             let advanced = self.advanced_amt.getter(id).get();
             self.pool_liquidity.set(self.pool_liquidity.get() + advanced);
@@ -165,16 +165,16 @@ impl Cobra {
                 usdc2.transfer(cfg2, freelancer, remainder)
                     .map_err(|_| b"remainder payout failed".to_vec())?;
             }
-            self.status.setter(id).set(5u8); // Recovered
+            self.status.setter(id).set(U256::from(5)); // Recovered
         } else {
-            self.status.setter(id).set(1u8); // Funded
+            self.status.setter(id).set(U256::from(1)); // Funded
         }
         Ok(())
     }
 
     /// Release a funded escrow to the freelancer (settlement). Callable by freelancer or owner agent.
     pub fn release(&mut self, id: U256) -> Result<(), Vec<u8>> {
-        if self.status.getter(id).get() != 1u8 {
+        if self.status.getter(id).get() != U256::from(1) {
             return Err(b"not funded".to_vec());
         }
         let caller = msg::sender();
@@ -187,7 +187,7 @@ impl Cobra {
         let config = Call::new_in(self);
         usdc.transfer(config, freelancer, amount)
             .map_err(|_| b"payout failed".to_vec())?;
-        self.status.setter(id).set(2u8); // Released
+        self.status.setter(id).set(U256::from(2)); // Released
         Ok(())
     }
 
@@ -212,7 +212,7 @@ impl Cobra {
         proof: Bytes,
         public_inputs: Vec<U256>,
     ) -> Result<U256, Vec<u8>> {
-        if self.status.getter(id).get() != 0u8 {
+        if self.status.getter(id).get() != U256::from(0) {
             return Err(b"invoice not in Created state".to_vec());
         }
         if msg::sender() != self.freelancer.getter(id).get() {
@@ -253,7 +253,7 @@ impl Cobra {
 
         self.pool_liquidity.set(self.pool_liquidity.get() - payout);
         self.advanced_amt.setter(id).set(amount); // pool reclaims full amount on client funding
-        self.status.setter(id).set(4u8);          // Advanced
+        self.status.setter(id).set(U256::from(4));          // Advanced
 
         let freelancer = self.freelancer.getter(id).get();
         let usdc = IERC20::new(self.usdc.get());
@@ -264,7 +264,7 @@ impl Cobra {
     }
 
     // ---- views ----
-    pub fn invoice_status(&self, id: U256) -> u8 { self.status.getter(id).get() }
+    pub fn invoice_status(&self, id: U256) -> U256 { self.status.getter(id).get() }
     pub fn invoice_amount(&self, id: U256) -> U256 { self.amount.getter(id).get() }
     pub fn pool(&self) -> U256 { self.pool_liquidity.get() }
     pub fn owner_addr(&self) -> Address { self.owner.get() }
@@ -289,7 +289,7 @@ mod tests {
         let id = c.create_invoice(addr(2), U256::from(3000), U256::from(0)).unwrap();
         assert_eq!(id, U256::from(1));
         assert_eq!(c.invoice_amount(id), U256::from(3000));
-        assert_eq!(c.invoice_status(id), 0u8); // Created
+        assert_eq!(c.invoice_status(id), U256::from(0)); // Created
         assert_eq!(c.advance_threshold(), U256::from(65));
     }
 
