@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { ArrowRight, ArrowUpRight, Check, X, Star, SealCheck } from "@phosphor-icons/react";
+import { ArrowRight, ArrowUpRight, Check, X, SealCheck } from "@phosphor-icons/react";
 import { SplitReveal, Counter, Rise } from "@/components/landing/Reveal";
 import { Chapters } from "@/components/landing/Chapters";
 import { Marquee } from "@/components/landing/Marquee";
@@ -83,7 +83,7 @@ function Nav() {
         <nav className="hidden items-center gap-9 md:flex">
           <NavLink href="#chapters">How it works</NavLink>
           <NavLink href="#compare">Why Cobra</NavLink>
-          <NavLink href="#reviews">Reviews</NavLink>
+          <NavLink href="#reviews">What&apos;s real</NavLink>
           <NavLink href="/dashboard">Live demo</NavLink>
         </nav>
         <Magnetic strength={0.5}>
@@ -149,8 +149,8 @@ function Hero() {
               </Link>
             </Magnetic>
             <div className="flex items-center gap-2 text-[12px] text-text-dim">
-              <div className="flex">{Array.from({ length: 5 }).map((_, i) => <Star key={i} size={13} weight="fill" />)}</div>
-              <span className="nums">3,158 paid early</span>
+              <SealCheck size={14} weight="fill" />
+              <span className="nums">Testnet demo · ETH México 2026</span>
             </div>
           </div>
         </Rise>
@@ -265,11 +265,20 @@ function Compare() {
   );
 }
 
-/* ---------------- testimonials ---------------- */
-const QUOTES = [
-  { q: "It collected an invoice my client had ignored for six weeks. I did nothing.", n: "Mariana Olvera", r: "Brand designer, CDMX" },
-  { q: "Advanced on a 3k invoice the same morning I sent it. That is the whole pitch.", n: "Diego Fuentes", r: "Full-stack dev, Guadalajara" },
-  { q: "The tax doc alone is worth it. My accountant used to charge me for this.", n: "Valentina Rojas", r: "Motion designer, Bogota" },
+/* ---------------- what's real (honest transparency) ---------------- */
+const REALITY = [
+  {
+    t: "Live & on-chain",
+    d: "Stylus contracts on Arbitrum Sepolia. Every advance is gated by a Groth16 zk credit proof verified on-chain — not a mock. The autonomous agent runs 24/7.",
+  },
+  {
+    t: "Real settlement rail",
+    d: "USDC pay-in and escrow move real testnet tokens you can trace on Arbiscan. The reputation root is anchored on-chain each epoch.",
+  },
+  {
+    t: "Simulated on testnet",
+    d: "The peso off-ramp (Bitso SPEI) and the CFDI tax doc run through sandbox APIs — same calls flip to live with production keys. We label what's simulated.",
+  },
 ];
 function Testimonials() {
   return (
@@ -277,24 +286,18 @@ function Testimonials() {
       <div className="shell">
         <div className="mb-16 flex items-end justify-between gap-6">
           <h2 className="display skewable max-w-[16ch] text-[clamp(38px,7vw,104px)]">
-            <SplitReveal text="Do not take" className="block" />
-            <SplitReveal text="our word for it." className="block" delay={0.08} />
+            <SplitReveal text="No mockups." className="block" />
+            <SplitReveal text="Here's what's real." className="block" delay={0.08} />
           </h2>
-          <span className="nums hidden pb-3 text-[12px] text-text-dim md:block">4.8 / 5 — 3,158 reviews</span>
+          <span className="nums hidden pb-3 text-[12px] text-text-dim md:block">Testnet · honest by default</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3">
-          {QUOTES.map((t, i) => (
-            <Rise key={t.n} delay={i * 0.08}>
+          {REALITY.map((t, i) => (
+            <Rise key={t.t} delay={i * 0.08}>
               <figure className="flex h-full flex-col justify-between gap-10 border-t border-border-strong p-7 md:border-l md:border-t-0 md:first:border-l-0">
-                <div className="flex gap-0.5">{Array.from({ length: 5 }).map((_, s) => <Star key={s} size={13} weight="fill" />)}</div>
-                <blockquote className="text-[clamp(17px,1.7vw,23px)] leading-snug">{t.q}</blockquote>
-                <figcaption className="flex items-center justify-between text-[12px] uppercase tracking-[0.06em]">
-                  <span>
-                    <span className="font-medium">{t.n}</span>
-                    <span className="ml-2 text-text-faint">{t.r}</span>
-                  </span>
-                  <SealCheck size={15} weight="fill" />
-                </figcaption>
+                <SealCheck size={20} weight="fill" />
+                <blockquote className="text-[clamp(16px,1.5vw,20px)] leading-snug">{t.d}</blockquote>
+                <figcaption className="text-[12px] font-medium uppercase tracking-[0.06em]">{t.t}</figcaption>
               </figure>
             </Rise>
           ))}
