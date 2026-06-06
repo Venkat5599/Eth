@@ -16,7 +16,13 @@ sol! {
     event Voted(uint256 indexed id, address voter, bool support, uint256 weight);
     event Executed(uint256 indexed id, address recipient, uint256 amount);
     event PowerGranted(address indexed member, uint256 amount);
+    event Transfer(address indexed from, address indexed to, uint256 amount);
+    event Joined(address indexed member, uint256 amount);
 }
+
+// Voting power doubles as a transferable governance token (GOV). New members can self-serve
+// `join()` to receive a starter allocation; balances move with `transfer`.
+const JOIN_ALLOCATION: u64 = 3;
 
 sol_storage! {
     #[entrypoint]
@@ -60,6 +66,33 @@ impl GrantsDao {
         self.power.setter(member).set(p + amount);
         self.total_power.set(self.total_power.get() + amount);
         evm::log(PowerGranted { member, amount });
+        Ok(())
+    }
+
+    /// Permissionless membership: anyone joins once and receives a starter GOV allocation.
+    /// This is what makes the DAO multi-user — no owner gatekeeping required.
+    pub fn join(&mut self) -> Result<(), Vec<u8>> {
+        if self.power.getter(msg::sender()).get() != U256::ZERO {
+            return Err(b"already a member".to_vec());
+        }
+        let amount = U256::from(JOIN_ALLOCATION);
+        self.power.setter(msg::sender()).set(amount);
+        self.total_power.set(self.total_power.get() + amount);
+        evm::log(Joined { member: msg::sender(), amount });
+        Ok(())
+    }
+
+    /// Transfer GOV (voting power) to another address. The governance token is fully transferable.
+    pub fn transfer(&mut self, to: Address, amount: U256) -> Result<(), Vec<u8>> {
+        let from = msg::sender();
+        let bal = self.power.getter(from).get();
+        if amount > bal {
+            return Err(b"insufficient balance".to_vec());
+        }
+        self.power.setter(from).set(bal - amount);
+        let to_bal = self.power.getter(to).get();
+        self.power.setter(to).set(to_bal + amount);
+        evm::log(Transfer { from, to, amount });
         Ok(())
     }
 
@@ -159,7 +192,10 @@ impl GrantsDao {
     pub fn treasury(&self) -> U256 { contract::balance() }
     pub fn proposal_count(&self) -> U256 { self.count.get() }
     pub fn power_of(&self, member: Address) -> U256 { self.power.getter(member).get() }
+    /// GOV token balance — alias of voting power (the token IS the vote weight).
+    pub fn balance_of(&self, member: Address) -> U256 { self.power.getter(member).get() }
     pub fn total_power(&self) -> U256 { self.total_power.get() }
+    pub fn total_supply(&self) -> U256 { self.total_power.get() }
     pub fn quorum(&self) -> U256 { self.quorum.get() }
     pub fn voting_period(&self) -> U256 { self.voting_period.get() }
     pub fn owner_addr(&self) -> Address { self.owner.get() }
