@@ -52,7 +52,9 @@ export async function draftNudge(inv: Invoice): Promise<Nudge> {
       body: JSON.stringify({
         model: MODEL,
         temperature: 0.6,
-        max_tokens: 400,
+        // Generous budget: reasoning models (e.g. deepseek-v4-flash) spend tokens on
+        // reasoning_content before emitting the JSON in content; too low leaves content empty.
+        max_tokens: 1200,
         response_format: { type: "json_object" },
         messages: [
           {
