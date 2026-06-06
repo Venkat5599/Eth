@@ -14,6 +14,16 @@ const BASE_URL = process.env.LLM_BASE_URL ?? "https://api.deepseek.com/v1";
 const MODEL = process.env.LLM_MODEL ?? "deepseek-chat";
 const API_KEY = process.env.LLM_API_KEY ?? process.env.OPENCODE_API_KEY ?? "";
 
+// Free fallback models (OpenCode Zen). If the primary rate-limits (429) or fails, we walk
+// down this list before giving up to the template. Override the primary via LLM_MODEL;
+// extend/replace the fallbacks via LLM_FALLBACK_MODELS (comma-separated).
+const FALLBACKS = (process.env.LLM_FALLBACK_MODELS ??
+  "qwen3.6-plus-free,minimax-m3-free,nemotron-3-super-free,mimo-v2.5-free")
+  .split(",")
+  .map((m) => m.trim())
+  .filter(Boolean);
+const MODELS = [MODEL, ...FALLBACKS].filter((m, i, a) => m && a.indexOf(m) === i);
+
 function tone(nudgeCount: number): Nudge["tone"] {
   if (nudgeCount === 0) return "friendly";
   if (nudgeCount === 1) return "firm";
@@ -42,44 +52,49 @@ export async function draftNudge(inv: Invoice): Promise<Nudge> {
 
   if (!API_KEY) return fallback;
 
-  try {
-    const res = await fetch(`${BASE_URL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        temperature: 0.6,
-        // Generous budget: reasoning models (e.g. deepseek-v4-flash) spend tokens on
-        // reasoning_content before emitting the JSON in content; too low leaves content empty.
-        max_tokens: 1200,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are Cobra, an AI collections agent for a freelancer. Write a short, professional " +
-              "payment-reminder email matching the requested tone. Warm but clear. No emojis. " +
-              'Return STRICT JSON: {"subject": string, "body": string}. A reminder only, no money instructions.',
-          },
-          {
-            role: "user",
-            content: `Tone: ${t}. Client: ${inv.clientName}. Invoice ${inv.id}, amount $${inv.amountUsd}, due ${due}. Prior reminders sent: ${inv.nudges.length}.`,
-          },
-        ],
-      }),
-    });
-    if (!res.ok) return fallback;
-    const data = await res.json();
-    const text: string | undefined = data?.choices?.[0]?.message?.content;
-    if (text) {
-      const json = JSON.parse(text);
-      if (json.subject && json.body) return { ...fallback, subject: json.subject, body: json.body };
+  const messages = [
+    {
+      role: "system",
+      content:
+        "You are Cobra, an AI collections agent for a freelancer. Write a short, professional " +
+        "payment-reminder email matching the requested tone. Warm but clear. No emojis. " +
+        'Return STRICT JSON: {"subject": string, "body": string}. A reminder only, no money instructions.',
+    },
+    {
+      role: "user",
+      content: `Tone: ${t}. Client: ${inv.clientName}. Invoice ${inv.id}, amount $${inv.amountUsd}, due ${due}. Prior reminders sent: ${inv.nudges.length}.`,
+    },
+  ];
+
+  // Walk the model list; skip to the next on rate-limit (429) or any failure.
+  for (const model of MODELS) {
+    try {
+      const res = await fetch(`${BASE_URL}/chat/completions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${API_KEY}` },
+        body: JSON.stringify({
+          model,
+          temperature: 0.6,
+          // Generous budget: reasoning models spend tokens on reasoning_content before the JSON.
+          max_tokens: 1200,
+          response_format: { type: "json_object" },
+          messages,
+        }),
+      });
+      if (res.status === 429) {
+        console.log(`   [llm] ${model} rate-limited, trying next model`);
+        continue;
+      }
+      if (!res.ok) continue;
+      const data = await res.json();
+      const text: string | undefined = data?.choices?.[0]?.message?.content;
+      if (text) {
+        const json = JSON.parse(text);
+        if (json.subject && json.body) return { ...fallback, subject: json.subject, body: json.body };
+      }
+    } catch {
+      /* try next model */
     }
-  } catch {
-    /* fall through to template */
   }
   return fallback;
 }
