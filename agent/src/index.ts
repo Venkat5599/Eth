@@ -12,6 +12,8 @@ import { store } from "./store";
 import { draftNudge } from "./llm";
 import { sendNudge, settle } from "./rails";
 import { chain, chainEnabled } from "./chain";
+import { generateCreditProof, circuitReady } from "./proof";
+import { currentEpoch } from "./merkle";
 import type { Invoice } from "./types";
 
 const POLL = Number(process.env.AGENT_POLL_SECONDS ?? 20) * 1000;
@@ -127,23 +129,69 @@ const server = Bun.serve({
       return json(inv, 201);
     }
 
-    // request a factoring advance — gated by the client reputation score
+    // request a factoring advance — gated by a zk credit proof.
+    // The proof is generated from the private reputation graph and verified on-chain by the
+    // Stylus CreditVerifier inside request_advance. Off-chain we keep an equivalent score
+    // gate as a fast pre-check and as the fallback when the chain/circuit isn't wired.
     const adv = pathname.match(/^\/invoices\/([^/]+)\/advance$/);
     if (adv && req.method === "POST") {
       const inv = store.get(adv[1]);
       if (!inv) return json({ error: "not found" }, 404);
       const rep = store.reputation(inv.clientId);
       const score = rep?.score ?? 50;
+      const fee = (inv.amountUsd * ADVANCE_FEE_BPS) / 10_000;
+      const advanceUsd = Math.round((inv.amountUsd - fee) * 100) / 100;
+
+      // ---- real on-chain, zk-gated path ----
+      if (chainEnabled && inv.onchainId && circuitReady()) {
+        try {
+          const reputation = store
+            .allReputation()
+            .map((r) => ({ clientId: r.clientId, score: r.score }));
+          const proof = await generateCreditProof(
+            inv.clientId,
+            ADVANCE_MIN_SCORE,
+            reputation,
+            currentEpoch(),
+          );
+          if (!proof)
+            return json(
+              { error: "credit proof would fail", score, threshold: ADVANCE_MIN_SCORE },
+              402,
+            );
+          const r = await chain.requestAdvance(
+            BigInt(inv.onchainId),
+            proof.proofBytes,
+            proof.publicInputs,
+          );
+          inv.advanceUsd = advanceUsd;
+          inv.status = "advanced";
+          if (r) {
+            inv.advanceTx = r.url;
+            console.log(`[chain] advance released for ${inv.id} · ${r.url}`);
+          }
+          store.upsert(inv);
+          return json({ ok: true, advanceUsd, score, fee, proof: true, tx: r?.url });
+        } catch (e) {
+          console.log(`[chain] request_advance failed: ${(e as Error).message}`);
+          // proof rejected on-chain or pool insufficient — surface as a decline
+          return json(
+            { error: "credit proof rejected", score, threshold: ADVANCE_MIN_SCORE, detail: (e as Error).message },
+            402,
+          );
+        }
+      }
+
+      // ---- off-chain fallback gate (no chain / circuit not built) ----
       if (score < ADVANCE_MIN_SCORE)
         return json(
           { error: "credit proof would fail", score, threshold: ADVANCE_MIN_SCORE },
           402,
         );
-      const fee = (inv.amountUsd * ADVANCE_FEE_BPS) / 10_000;
-      inv.advanceUsd = Math.round((inv.amountUsd - fee) * 100) / 100;
+      inv.advanceUsd = advanceUsd;
       inv.status = "advanced";
       store.upsert(inv);
-      return json({ ok: true, advanceUsd: inv.advanceUsd, score, fee });
+      return json({ ok: true, advanceUsd, score, fee, proof: false });
     }
 
     // simulate the client funding the escrow -> settle

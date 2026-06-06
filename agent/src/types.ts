@@ -20,6 +20,7 @@ export interface Invoice {
   createdAt: string;
   nudges: Nudge[];
   advanceUsd?: number;      // amount advanced to the freelancer
+  advanceTx?: string;       // arbiscan url for the request_advance tx (zk-gated), when on-chain
   settlement?: Settlement;
   onchainId?: string;       // on-chain invoice id (Arbitrum Sepolia), when chain is enabled
   onchainTx?: string;       // arbiscan url for the create_invoice tx

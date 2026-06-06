@@ -16,7 +16,7 @@ export interface Settlement {
 export interface Invoice {
   id: string; freelancer: string; clientName: string; clientEmail: string;
   clientId: string; amountUsd: number; dueDate: string; status: InvoiceStatus;
-  createdAt: string; nudges: Nudge[]; advanceUsd?: number; settlement?: Settlement;
+  createdAt: string; nudges: Nudge[]; advanceUsd?: number; advanceTx?: string; settlement?: Settlement;
 }
 export interface ClientRep {
   clientId: string; clientName: string; invoicesPaid: number;
