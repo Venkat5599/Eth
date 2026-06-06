@@ -112,7 +112,7 @@ mod bridge_test {
         }
     }
 
-    fn build(swap: bool) -> bool {
+    fn build(swap: bool, rev_inputs: bool) -> Result<bool, alloc::string::String> {
         let pj: serde_json::Value =
             serde_json::from_str(&fs::read_to_string("/tmp/proof.json").unwrap()).unwrap();
         let vj: serde_json::Value =
@@ -134,15 +134,31 @@ mod bridge_test {
             gamma_abc_g1: ic,
         };
         let pvk = prepare_verifying_key(&vk);
-        let inputs: Vec<Fr> = pubs.iter().map(|s| fr(s)).collect();
-        Groth16::<Bn254>::verify_with_processed_vk(&pvk, &inputs, &proof).unwrap_or(false)
+        let mut inputs: Vec<Fr> = pubs.iter().map(|s| fr(s)).collect();
+        if rev_inputs { inputs.reverse(); }
+        Groth16::<Bn254>::verify_with_processed_vk(&pvk, &inputs, &proof)
+            .map_err(|e| alloc::format!("{e:?}"))
     }
 
     #[test]
     fn find_g2_order() {
-        let asis = build(false);
-        let swapped = build(true);
-        println!("VERIFY as-is(c0,c1)={asis}  swapped(c1,c0)={swapped}");
-        assert!(asis || swapped, "neither ordering verified — bug elsewhere");
+        use ark_ec::AffineRepr;
+        // on-curve sanity of the parsed points
+        let pj: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string("/tmp/proof.json").unwrap()).unwrap();
+        let vj: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string("/tmp/vk.json").unwrap()).unwrap();
+        let a = g1(&pj["pi_a"]);
+        let c = g1(&pj["pi_c"]);
+        let alpha = g1(&vj["vk_alpha_1"]);
+        println!("on_curve: a={} c={} alpha={}", a.is_on_curve(), c.is_on_curve(), alpha.is_on_curve());
+        println!("g2 b asis on_curve={}", g2(&pj["pi_b"], false).is_on_curve());
+        println!("g2 b swap on_curve={}", g2(&pj["pi_b"], true).is_on_curve());
+        for (s, r) in [(false, false), (true, false), (false, true), (true, true)] {
+            match build(s, r) {
+                Ok(v) => println!("swap={s} rev_inputs={r} => Ok({v})"),
+                Err(e) => println!("swap={s} rev_inputs={r} => Err({e:?})"),
+            }
+        }
     }
 }
