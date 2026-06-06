@@ -7,7 +7,7 @@ for the 30M+ Latin American freelancers who earn in dollars from global clients.
 the invoice, settles in stablecoins, files the local tax doc — and because it learns which
 clients actually pay, it can **advance you the cash today** on invoices clients haven't paid yet.
 
-> Built for **Ethereum México 2026** (AI × Blockchain, w/ Bitso) and **Arbitrum Open House London**.
+> Built for **Ethereum México 2026** (AI × Blockchain, w/ Bitso) 
 
 ---
 
