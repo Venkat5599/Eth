@@ -48,6 +48,8 @@ bash build.sh
 
 echo "==> deploy CreditVerifier (Stylus) to Arbitrum Sepolia"
 cd "$APP_DIR/contracts/credit-verifier"
+# ruint 1.18 panics on U8::to_be_bytes::<32> under rustc 1.92; 1.15 is clean.
+cargo generate-lockfile && cargo update -p ruint --precise 1.15.0
 cargo stylus check --endpoint "$RPC" || true
 VERIFIER_OUT=$(cargo stylus deploy --endpoint "$RPC" --private-key "$PRIVATE_KEY" --no-verify 2>&1 | tee /dev/stderr)
 VERIFIER_ADDR=$(echo "$VERIFIER_OUT" | grep -oiE '0x[0-9a-f]{40}' | tail -1)
@@ -55,6 +57,7 @@ echo "==> CreditVerifier at: ${VERIFIER_ADDR:-DEPLOY_FAILED}"
 
 echo "==> deploy Cobra (Stylus) to Arbitrum Sepolia"
 cd "$APP_DIR/contracts/cobra"
+cargo generate-lockfile && cargo update -p ruint --precise 1.15.0
 cargo stylus check --endpoint "$RPC" || true
 DEPLOY_OUT=$(cargo stylus deploy --endpoint "$RPC" --private-key "$PRIVATE_KEY" --no-verify 2>&1 | tee /dev/stderr)
 COBRA_ADDR=$(echo "$DEPLOY_OUT" | grep -oiE '0x[0-9a-f]{40}' | tail -1)
