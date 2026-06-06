@@ -1,0 +1,4 @@
+# Shell scripts must stay LF or they break when run on the Linux VPS.
+*.sh text eol=lf
+# Normalize the rest, let Git decide line endings on checkout.
+* text=auto

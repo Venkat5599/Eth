@@ -28,6 +28,10 @@ snarkjs zkey export verificationkey build/credit_final.zkey build/verification_k
 echo "==> exporting Solidity verifier (reference; Stylus port lives in contracts/)"
 snarkjs zkey export solidityverifier build/credit_final.zkey build/Verifier.sol
 
+echo "==> generating embedded Rust verifying key for the Stylus CreditVerifier"
+node gen-vk.mjs > ../contracts/credit-verifier/src/vk.rs
+echo "    wrote contracts/credit-verifier/src/vk.rs"
+
 echo "==> done. artifacts in circuits/build/"
 echo "    - credit_js/credit.wasm   (prover witness)"
 echo "    - credit_final.zkey        (proving key)"

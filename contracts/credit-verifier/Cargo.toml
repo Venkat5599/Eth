@@ -1,0 +1,27 @@
+[package]
+name = "credit-verifier"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Cobra zk credit gate — Groth16 BN254 verifier on Stylus (Rust->WASM)"
+
+[dependencies]
+alloy-primitives = { workspace = true }
+alloy-sol-types = { workspace = true }
+stylus-sdk = { workspace = true }
+
+# Groth16 pairing math in WASM. This is the workload Stylus exists for: a Solidity
+# verifier leans on the ecPairing precompile; here the BN254 pairing runs in-WASM,
+# which is dramatically cheaper for this shape of compute.
+ark-bn254 = { version = "0.5", default-features = false, features = ["curve"] }
+ark-ec = { version = "0.5", default-features = false }
+ark-ff = { version = "0.5", default-features = false }
+ark-groth16 = { version = "0.5", default-features = false }
+ark-serialize = { version = "0.5", default-features = false }
+ark-snark = { version = "0.5", default-features = false }
+
+[features]
+export-abi = ["stylus-sdk/export-abi"]
+
+[lib]
+crate-type = ["lib", "cdylib"]

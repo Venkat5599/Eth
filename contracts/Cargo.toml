@@ -1,20 +1,19 @@
-[package]
-name = "cobra-contracts"
-version = "0.1.0"
-edition = "2021"
-license = "MIT"
-description = "Cobra Stylus contracts — EscrowVault, AdvancePool, CreditVerifier gate"
+# Cobra Stylus contracts — workspace.
+# Two deployable contracts:
+#   cobra/            EscrowVault + AdvancePool (the money state machine)
+#   credit-verifier/  Groth16 verifier (Rust→WASM) — the zk credit gate Cobra calls
+#
+# Each is deployed separately:
+#   cargo stylus deploy --manifest-path credit-verifier/Cargo.toml ...
+#   cargo stylus deploy --manifest-path cobra/Cargo.toml ...
+[workspace]
+members = ["cobra", "credit-verifier"]
+resolver = "2"
 
-[dependencies]
+[workspace.dependencies]
 alloy-primitives = "=0.8.20"
 alloy-sol-types = "=0.8.20"
 stylus-sdk = "0.8.4"
-
-[features]
-export-abi = ["stylus-sdk/export-abi"]
-
-[lib]
-crate-type = ["lib", "cdylib"]
 
 [profile.release]
 codegen-units = 1
