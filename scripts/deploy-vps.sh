@@ -47,15 +47,16 @@ cd "$APP_DIR/circuits"
 bash build.sh
 
 echo "==> deploy CreditVerifier (Stylus) to Arbitrum Sepolia"
-cd "$APP_DIR/contracts"
-cargo stylus check --manifest-path credit-verifier/Cargo.toml --endpoint "$RPC" || true
-VERIFIER_OUT=$(cargo stylus deploy --manifest-path credit-verifier/Cargo.toml --endpoint "$RPC" --private-key "$PRIVATE_KEY" --no-verify 2>&1 | tee /dev/stderr)
+cd "$APP_DIR/contracts/credit-verifier"
+cargo stylus check --endpoint "$RPC" || true
+VERIFIER_OUT=$(cargo stylus deploy --endpoint "$RPC" --private-key "$PRIVATE_KEY" --no-verify 2>&1 | tee /dev/stderr)
 VERIFIER_ADDR=$(echo "$VERIFIER_OUT" | grep -oiE '0x[0-9a-f]{40}' | tail -1)
 echo "==> CreditVerifier at: ${VERIFIER_ADDR:-DEPLOY_FAILED}"
 
 echo "==> deploy Cobra (Stylus) to Arbitrum Sepolia"
-cargo stylus check --manifest-path cobra/Cargo.toml --endpoint "$RPC" || true
-DEPLOY_OUT=$(cargo stylus deploy --manifest-path cobra/Cargo.toml --endpoint "$RPC" --private-key "$PRIVATE_KEY" --no-verify 2>&1 | tee /dev/stderr)
+cd "$APP_DIR/contracts/cobra"
+cargo stylus check --endpoint "$RPC" || true
+DEPLOY_OUT=$(cargo stylus deploy --endpoint "$RPC" --private-key "$PRIVATE_KEY" --no-verify 2>&1 | tee /dev/stderr)
 COBRA_ADDR=$(echo "$DEPLOY_OUT" | grep -oiE '0x[0-9a-f]{40}' | tail -1)
 echo "==> deployed Cobra at: ${COBRA_ADDR:-DEPLOY_FAILED}"
 

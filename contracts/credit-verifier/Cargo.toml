@@ -6,9 +6,9 @@ license = "MIT"
 description = "Cobra zk credit gate — Groth16 BN254 verifier on Stylus (Rust->WASM)"
 
 [dependencies]
-alloy-primitives = { workspace = true }
-alloy-sol-types = { workspace = true }
-stylus-sdk = { workspace = true }
+alloy-primitives = "=0.8.20"
+alloy-sol-types = "=0.8.20"
+stylus-sdk = "0.8.4"
 
 # Groth16 pairing math in WASM. This is the workload Stylus exists for: a Solidity
 # verifier leans on the ecPairing precompile; here the BN254 pairing runs in-WASM,
@@ -25,3 +25,10 @@ export-abi = ["stylus-sdk/export-abi"]
 
 [lib]
 crate-type = ["lib", "cdylib"]
+
+[profile.release]
+codegen-units = 1
+strip = true
+lto = true
+panic = "abort"
+opt-level = "s"
