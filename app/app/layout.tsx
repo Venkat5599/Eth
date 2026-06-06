@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cobra — get paid, then paid early",
+  title: "Grants DAO — fund what the crowd backs",
   description:
-    "The AI collections agent for LATAM freelancers. Chases the invoice, settles in pesos, and advances your cash because it knows which clients pay.",
+    "A fully on-chain grants treasury on Arbitrum Stylus. Members propose, the community votes by weight, and the contract pays out — no backend, no admin keys on the money.",
 };
 
 export default function RootLayout({

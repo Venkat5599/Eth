@@ -52,7 +52,7 @@ export function Intro() {
     <div ref={root}>
       <div className="intro-wrap">
         <div className="intro-mark flex items-end gap-4">
-          <span className="display text-[clamp(48px,9vw,120px)]">COBRA</span>
+          <span className="display text-[clamp(48px,9vw,120px)]">DAO</span>
           <span ref={numRef} className="nums mb-3 text-[clamp(16px,2vw,24px)] text-text-faint">000</span>
         </div>
       </div>

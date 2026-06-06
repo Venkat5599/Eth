@@ -27,13 +27,13 @@ export default function Landing() {
       <Nav />
       <Hero />
       <div className="skewable">
-        <Marquee text="Get paid early" />
+        <Marquee text="Propose · Vote · Execute" />
       </div>
       <CodeSection />
       <section className="shell relative py-[14vw]">
         <span className="text-[11px] uppercase tracking-[0.24em] text-text-faint">[ The thesis ]</span>
         <div className="mt-8">
-          <ScrollFill text="The bottleneck was never the payment. It was knowing who actually pays." />
+          <ScrollFill text="A treasury nobody controls alone. The vote is the only key to the money." />
         </div>
       </section>
       <div id="chapters">
@@ -76,23 +76,23 @@ function Nav() {
       <div className="shell flex h-[68px] items-center justify-between">
         <Link href="/" className="flex items-center gap-3">
           <span className="grid h-8 w-8 place-items-center text-[14px] font-bold" style={{ background: "#0d0b07", color: "var(--bg)" }}>
-            C
+            ◆
           </span>
-          <span className="text-[15px] font-semibold uppercase tracking-[0.1em]">Cobra</span>
+          <span className="text-[15px] font-semibold uppercase tracking-[0.1em]">Grants DAO</span>
         </Link>
         <nav className="hidden items-center gap-9 md:flex">
           <NavLink href="#chapters">How it works</NavLink>
-          <NavLink href="#compare">Why Cobra</NavLink>
+          <NavLink href="#compare">Why on-chain</NavLink>
           <NavLink href="#reviews">What&apos;s real</NavLink>
-          <NavLink href="/dashboard">Live demo</NavLink>
+          <NavLink href="/dao">Live DAO</NavLink>
         </nav>
         <Magnetic strength={0.5}>
           <Link
-            href="/dashboard"
+            href="/dao"
             className="inline-flex items-center gap-2 px-4 py-2.5 text-[12px] font-medium uppercase tracking-[0.1em] transition-colors"
             style={{ background: "var(--text)", color: "var(--bg)" }}
           >
-            Open Cobra <ArrowRight size={13} weight="bold" />
+            Open DAO <ArrowRight size={13} weight="bold" />
           </Link>
         </Magnetic>
       </div>
@@ -108,18 +108,18 @@ function Hero() {
       <div className="absolute inset-0 z-0"><ShaderBg /></div>
       {/* editorial meta bar */}
       <Rise className="shell relative z-10 mt-8 flex items-center justify-between border-b border-border pb-4 text-[11px] uppercase tracking-[0.24em] text-text-faint">
-        <span>[ ART + TECH ]</span>
-        <span className="hidden sm:block">Iced invoices, served early</span>
+        <span>[ ON-CHAIN GOVERNANCE ]</span>
+        <span className="hidden sm:block">Arbitrum Stylus · no backend</span>
         <span>2026 / EDITION 01</span>
       </Rise>
 
       {/* giant headline */}
       <div className="shell relative z-10">
         <h1 className="display text-[clamp(56px,12.5vw,184px)]">
-          <SplitReveal as="span" text="Get paid," className="block" />
-          <SplitReveal as="span" text="then paid" className="block" delay={0.08} />
+          <SplitReveal as="span" text="Fund what" className="block" />
+          <SplitReveal as="span" text="the crowd" className="block" delay={0.08} />
           <span className="block">
-            <SplitReveal as="span" text="early." className="outline-word" delay={0.16} />
+            <SplitReveal as="span" text="backs." className="outline-word" delay={0.16} />
           </span>
         </h1>
         <motion.div
@@ -134,31 +134,31 @@ function Hero() {
       <div className="shell relative z-10 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_auto] lg:items-end">
         <Rise delay={0.2} className="max-w-[44ch]">
           <p className="text-[clamp(15px,1.45vw,20px)] leading-relaxed text-text-dim">
-            Cobra chases your invoices, settles in pesos, files the tax doc, and advances your cash
-            today because it knows which clients pay.
+            A fully on-chain grants treasury on Arbitrum Stylus. Members propose, the community
+            votes by weight, and the contract pays out — no admin keys on the money.
           </p>
           <div className="mt-7 flex flex-wrap items-center gap-6">
             <Magnetic strength={0.4}>
               <Link
-                href="/dashboard"
+                href="/dao"
                 className="group inline-flex items-center gap-2.5 px-6 py-3.5 text-[13px] font-medium uppercase tracking-[0.1em] transition-colors"
                 style={{ background: "var(--text)", color: "var(--bg)" }}
               >
-                See it work
+                Enter the DAO
                 <ArrowRight size={15} weight="bold" className="transition-transform duration-300 group-hover:translate-x-1" />
               </Link>
             </Magnetic>
             <div className="flex items-center gap-2 text-[12px] text-text-dim">
               <SealCheck size={14} weight="fill" />
-              <span className="nums">Testnet demo · ETH México 2026</span>
+              <span className="nums">Live on Arbitrum Sepolia · testnet</span>
             </div>
           </div>
         </Rise>
 
         <div className="flex flex-col border-t border-border lg:min-w-[360px]">
-          <StatRow value={95} suffix="%" label="of the invoice, advanced instantly" />
-          <StatRow value={0} suffix="" label="invoices you chase yourself" />
-          <StatRow value={3} suffix="" label="chains — Base, Arbitrum, Ethereum" last />
+          <StatRow value={100} suffix="%" label="on-chain — no backend, no admin keys" />
+          <StatRow value={0} suffix="" label="trust required to move the treasury" />
+          <StatRow value={1} suffix="" label="vote = the only key to the money" last />
         </div>
       </div>
     </section>
@@ -176,10 +176,10 @@ function StatRow({ value, suffix, label, last }: { value: number; suffix: string
 
 /* ---------------- code section ---------------- */
 const MODULES = [
-  ["cobra::collections", "The agent chases. The contract holds the money."],
-  ["cobra::advance", "Cash today, gated by a zero-knowledge credit proof."],
-  ["cobra::credit", "Prove a client pays. Reveal nothing else."],
-  ["cobra::settle", "USDC to MXNe to pesos. The tax doc, generated."],
+  ["dao::propose", "Any member opens a grant: recipient, amount, reason."],
+  ["dao::vote", "For or against, weighted by your voting power. One vote each."],
+  ["dao::quorum", "Passes only on majority and minimum turnout."],
+  ["dao::execute", "Voting closes, anyone triggers the payout. The chain sends it."],
 ];
 function CodeSection() {
   return (
@@ -192,8 +192,8 @@ function CodeSection() {
             <SplitReveal text="Real contracts." className="block" delay={0.08} />
           </h2>
           <p className="mt-7 max-w-[40ch] text-[15px] leading-relaxed text-text-dim">
-            Cobra runs on Stylus contracts and a Circom credit circuit. The agent writes the
-            language. The chain enforces the money. This is the actual logic, streaming live.
+            One Stylus contract (Rust→WASM) holds the treasury and the rules. Proposals, votes,
+            and payouts are all on-chain. No server sits between you and the money.
           </p>
           <ul className="mt-10 flex flex-col">
             {MODULES.map(([m, d], i) => (
@@ -211,7 +211,7 @@ function CodeSection() {
             <span className="h-2.5 w-2.5 rounded-full border border-border-strong" />
             <span className="h-2.5 w-2.5 rounded-full border border-border-strong" />
             <span className="h-2.5 w-2.5 rounded-full border border-border-strong" />
-            <span className="nums ml-3 text-[11px] uppercase tracking-[0.18em] text-text-faint">cobra / contracts</span>
+            <span className="nums ml-3 text-[11px] uppercase tracking-[0.18em] text-text-faint">grants-dao / contract</span>
           </div>
           <div className="h-[calc(560px-49px)]">
             <CodeStream />
@@ -224,12 +224,12 @@ function CodeSection() {
 
 /* ---------------- compare ---------------- */
 const ROWS = [
-  "Chases the client for you",
-  "Advances cash before the client pays",
-  "Settles straight to pesos via SPEI",
-  "Generates the tax document",
-  "Under 1% FX, not 5 to 10%",
-  "Knows which clients actually pay",
+  "Treasury moves only by member vote",
+  "No admin can drain the funds",
+  "Every proposal and tally is public on-chain",
+  "Quorum + majority enforced by code",
+  "Anyone can execute a passed grant",
+  "No backend, no custodian, no trust",
 ];
 function Compare() {
   return (
@@ -237,12 +237,12 @@ function Compare() {
       <div className="shell">
         <div className="mb-16 flex items-end justify-between gap-6 border-b border-border-strong pb-6">
           <h2 className="display skewable max-w-[12ch] text-[clamp(38px,7vw,104px)]">
-            <SplitReveal text="The bank does" className="block" />
+            <SplitReveal text="A multisig does" className="block" />
             <SplitReveal text="none of this." className="block" delay={0.08} />
           </h2>
           <div className="hidden gap-12 pb-3 text-[11px] uppercase tracking-[0.2em] text-text-faint md:flex">
-            <span>Bank / PayPal</span>
-            <span className="text-text">Cobra</span>
+            <span>Multisig / admin</span>
+            <span className="text-text">Grants DAO</span>
           </div>
         </div>
 
@@ -268,16 +268,16 @@ function Compare() {
 /* ---------------- what's real (honest transparency) ---------------- */
 const REALITY = [
   {
-    t: "Live & on-chain",
-    d: "Stylus contracts on Arbitrum Sepolia. Every advance is gated by a Groth16 zk credit proof verified on-chain — not a mock. The autonomous agent runs 24/7.",
+    t: "Live on-chain",
+    d: "One Stylus contract on Arbitrum Sepolia holds the treasury and the rules. Proposals, votes, quorum, and payouts all execute on-chain — verifiable on Arbiscan.",
   },
   {
-    t: "Real settlement rail",
-    d: "USDC pay-in and escrow move real testnet tokens you can trace on Arbiscan. The reputation root is anchored on-chain each epoch.",
+    t: "No backend",
+    d: "The frontend reads state from a public RPC and writes through your own wallet. Nothing runs on a server — there's no API to trust or take down.",
   },
   {
-    t: "Simulated on testnet",
-    d: "The peso off-ramp (Bitso SPEI) and the CFDI tax doc run through sandbox APIs — same calls flip to live with production keys. We label what's simulated.",
+    t: "Non-custodial",
+    d: "No admin key can move the treasury. Funds leave only when a proposal clears majority and quorum, then anyone may trigger the payout.",
   },
 ];
 function Testimonials() {
@@ -313,21 +313,21 @@ function CtaFooter() {
     <footer className="relative overflow-hidden border-t border-border-strong py-[16vw]">
       <div className="shell relative z-10">
         <h2 className="display skewable text-[clamp(56px,15vw,240px)]">
-          <SplitReveal text="Cobra it." />
+          <SplitReveal text="Govern it." />
         </h2>
         <div className="mt-12 flex flex-wrap items-end justify-between gap-8 border-t border-border pt-8">
           <Magnetic strength={0.4}>
             <Link
-              href="/dashboard"
+              href="/dao"
               className="group inline-flex items-center gap-2.5 px-7 py-4 text-[14px] font-medium uppercase tracking-[0.1em] transition-colors"
               style={{ background: "var(--text)", color: "var(--bg)" }}
             >
-              Open the live demo
+              Enter the live DAO
               <ArrowUpRight size={17} weight="bold" className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </Link>
           </Magnetic>
           <p className="nums text-[11px] uppercase tracking-[0.2em] text-text-faint">
-            Cobra — ETH Mexico 2026 / Arbitrum Open House London
+            Grants DAO — Arbitrum Stylus / ETH México 2026
           </p>
         </div>
       </div>

@@ -4,39 +4,35 @@ import { useEffect, useRef } from "react";
 import { useReducedMotion } from "motion/react";
 import { useGsap } from "@/lib/gsap";
 
-/* Aptos-style auto-scrolling code motif — but it streams Cobra's ACTUAL contract
-   logic (Stylus advance gate + Circom credit constraint), so the device is honest.
+/* Aptos-style auto-scrolling code motif — streams the Grants DAO's ACTUAL Stylus contract
+   logic (weighted vote + quorum-gated payout), so the device is honest.
    Rendered from a token model so no raw angle brackets confuse the JSX parser. */
 
 type Tok = [string, string?];
 const L: Tok[][] = [
-  [["// module cobra::collections", "cm"]],
-  [["/// the agent chases. the contract holds the money.", "cm"]],
-  [["/// an LLM can draft a nudge. it can never move value.", "cm"]],
+  [["// module grants_dao", "cm"]],
+  [["/// members propose. the crowd votes. the treasury pays.", "cm"]],
+  [["/// no admin key can move the funds.", "cm"]],
   [[""]],
-  [["pub fn ", "kw"], ["request_advance", "fn"], ["(id, proof, public_inputs) ", "pu"], ["{", "pu"]],
-  [["    // the zk credit gate, provable, not reverse-engineerable", "cm"]],
-  [["    let", "kw"], [" ok = verifier."], ["verify", "fn"], ["(cfg, proof, inputs)?;", "pu"]],
-  [["    if", "kw"], [" !ok "], ["{", "pu"], [" return", "kw"], [" Err("], ['"credit proof rejected"', "st"], ["); }", "pu"]],
-  [["    let", "kw"], [" fee = amount * advance_bps / "], ["10000", "st"], [";", "pu"]],
-  [["    let", "kw"], [" payout = amount - fee;   "], ["// freelancer paid now", "cm"]],
-  [["    self."], ["transfer", "fn"], ["(freelancer, payout)?;", "pu"]],
+  [["pub fn ", "kw"], ["vote", "fn"], ["(id, support) ", "pu"], ["{", "pu"]],
+  [["    let", "kw"], [" weight = self.power."], ["get", "fn"], ["(sender);", "pu"]],
+  [["    if", "kw"], [" weight == "], ["0", "st"], [" { return", "kw"], [" Err("], ['"no voting power"', "st"], ["); }", "pu"]],
+  [["    if", "kw"], [" now > deadline { return", "kw"], [" Err("], ['"voting closed"', "st"], ["); }", "pu"]],
+  [["    if", "kw"], [" support { votes_for += weight; }", "pu"]],
+  [["    else", "kw"], [" { votes_against += weight; }", "pu"]],
   [["}", "pu"]],
   [[""]],
-  [["// circuit credit.circom, prove score >= T, reveal nothing", "cm"]],
-  [["template ", "kw"], ["CreditProof", "fn"], ["(LEVELS) ", "pu"], ["{", "pu"]],
-  [["    component", "kw"], [" ge = "], ["GreaterEqThan", "fn"], ["(8);", "pu"]],
-  [["    ge.in[0] <== score;", "pu"]],
-  [["    ge.in[1] <== threshold;", "pu"]],
-  [["    ge.out === ", "pu"], ["1", "st"], [";   "], ["// the gate", "cm"]],
-  [["    root === computed;   ", "pu"], ["// client is in the graph", "cm"]],
+  [["pub fn ", "kw"], ["execute", "fn"], ["(id) ", "pu"], ["{", "pu"]],
+  [["    // the gate: majority + quorum, enforced on-chain", "cm"]],
+  [["    if", "kw"], [" votes_for <= votes_against { return", "kw"], [" Err(..); }", "pu"]],
+  [["    if", "kw"], [" votes_for < quorum { return", "kw"], [" Err("], ['"quorum"', "st"], ["); }", "pu"]],
+  [["    self."], ["executed", "fn"], [".set(id, ", "pu"], ["true", "kw"], [");", "pu"]],
+  [["    transfer_eth", "fn"], ["(recipient, amount)?;   "], ["// treasury pays", "cm"]],
   [["}", "pu"]],
   [[""]],
-  [["// agent loop, runs 24/7 on the VPS", "cm"]],
-  [["while", "kw"], [" ("], ["overdue", "fn"], ["(invoice)) ", "pu"], ["{", "pu"]],
-  [["    const", "kw"], [" nudge = "], ["await", "kw"], [" "], ["draftNudge", "fn"], ["(invoice);", "pu"]],
-  [["    await", "kw"], [" "], ["send", "fn"], ["(nudge);   "], ["// escalates over time", "cm"]],
-  [["}", "pu"]],
+  [["// frontend — reads chain, writes via your wallet, no backend", "cm"]],
+  [["const", "kw"], [" hash = "], ["await", "kw"], [" "], ["tx", "fn"], [".execute(account, id);", "pu"]],
+  [["await", "kw"], [" pub."], ["waitForTransactionReceipt", "fn"], ["({ hash });", "pu"]],
 ];
 
 function Block() {

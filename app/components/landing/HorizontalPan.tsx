@@ -8,12 +8,12 @@ import { useGsap } from "@/lib/gsap";
    track of panels. Synced to Lenis via ScrollTrigger. Reduced motion -> plain stack. */
 
 const PANELS = [
-  ["01", "Stablecoins", "Invoices settle in USDC on Base. Gas under a cent, not a 5% wire."],
-  ["02", "Escrow", "Each invoice is an on-chain Stylus vault. Funds release on settlement."],
-  ["03", "Underwriting", "A zk credit proof clears the advance. Provable, never reverse-engineerable."],
-  ["04", "Factoring", "The pool pays you now and recovers when the client funds. No bank."],
-  ["05", "Settlement", "USDC to MXNe to pesos via SPEI. Money lands in a real account."],
-  ["06", "Tax", "The CFDI generates itself. The whole back office, gone."],
+  ["01", "Stylus", "One Rust→WASM contract holds the treasury and the governance rules."],
+  ["02", "Membership", "Voting power is granted on-chain. Your weight is your stake."],
+  ["03", "Proposals", "Any member opens a grant. It's public the instant it's signed."],
+  ["04", "Voting", "Weighted for/against, one ballot each, inside a fixed window."],
+  ["05", "Quorum", "Majority plus minimum turnout — the bar is in the code."],
+  ["06", "Payout", "Passed proposals execute themselves. The treasury sends the grant."],
 ];
 
 export function HorizontalPan() {
@@ -46,7 +46,7 @@ export function HorizontalPan() {
     <section ref={wrap} className="relative overflow-hidden border-y border-border">
       {/* header overlays the pinned viewport */}
       <div className="shell pointer-events-none absolute left-0 right-0 top-8 z-10 flex items-center justify-between text-[11px] uppercase tracking-[0.24em] text-text-faint">
-        <span>[ What Cobra runs on ]</span>
+        <span>[ What the DAO runs on ]</span>
         <span className="hidden sm:block">Scroll →</span>
       </div>
       <div

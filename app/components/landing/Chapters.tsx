@@ -28,30 +28,30 @@ const LIGHT_VARS = {
 const CHAPTERS: Chapter[] = [
   {
     n: "01",
-    kicker: "It chases",
-    title: "Your invoices, worked while you sleep.",
-    body: "The agent follows up on every overdue invoice, escalating tone over time, across email and chat. You stop being the person who nags clients.",
+    kicker: "Propose",
+    title: "Anyone with a stake can ask for funds.",
+    body: "A member opens a grant proposal: who gets paid, how much, and why. It lands on-chain the moment they sign — no gatekeeper, no form to a foundation.",
     tint: "#0c0d10",
   },
   {
     n: "02",
-    kicker: "It underwrites",
-    title: "It learns which clients actually pay.",
-    body: "Every settled invoice sharpens a private payment graph. Cobra knows the client who pays in four days from the one who ghosts for forty.",
+    kicker: "Vote",
+    title: "The crowd decides, weighted by its stake.",
+    body: "Members vote for or against within the window. Each vote counts as much as the power they hold. One member, one ballot per proposal.",
     tint: "#101216",
   },
   {
     n: "03",
-    kicker: "It pays you early",
-    title: "Cash today, on an invoice they have not paid.",
-    body: "Because the credit decision is provable, Cobra advances your money now and collects from the client later. No bank. No factoring desk.",
+    kicker: "Quorum",
+    title: "Passing takes a majority and a turnout.",
+    body: "A proposal clears only when the FOR votes beat AGAINST and reach the minimum quorum. The bar lives in the contract — nobody can lower it.",
     tint: "#15171c",
   },
   {
     n: "04",
-    kicker: "It settles",
-    title: "Pesos in your bank. Taxes already filed.",
-    body: "A slice held in MXNe, the rest off-ramped via SPEI, and the tax doc generated. The whole back office, gone.",
+    kicker: "Execute",
+    title: "The treasury pays. No human in the loop.",
+    body: "Once voting closes, anyone can execute a passed proposal. The contract sends the grant straight from the treasury. No admin key, no countersignature.",
     tint: "#0a0d12",
   },
 ];
@@ -77,86 +77,76 @@ const Row = ({ children, last }: { children: React.ReactNode; last?: boolean }) 
   <div className={`flex items-center justify-between gap-4 py-3.5 ${last ? "" : "border-b border-border"}`}>{children}</div>
 );
 
-function ChaseFig() {
-  const nudges = [
-    ["Friendly", "Quick note on invoice INV-3001", "sent · day 1"],
-    ["Firm", "Invoice INV-3001 is now overdue", "sent · day 4"],
-    ["Final", "Final notice: INV-3001 ($3,000)", "queued · day 7"],
-  ];
+function ProposeFig() {
   return (
-    <Panel label="agent / outbox">
-      {nudges.map(([tone, subj, meta], i) => (
-        <Row key={i} last={i === nudges.length - 1}>
-          <div className="min-w-0">
-            <div className="text-[13px]">
-              <span className="mr-2 uppercase tracking-[0.1em] text-text-faint">{tone}</span>
-              <span className="text-text">{subj}</span>
-            </div>
-            <div className="nums mt-1 text-[11px] text-text-faint">to client · {meta}</div>
-          </div>
-          <span className="nums text-[11px] text-text-dim">{String(i + 1).padStart(2, "0")}</span>
+    <Panel label="dao / propose #7">
+      <Row><span className="text-[13px] text-text-dim">Recipient</span><span className="nums text-[13px] text-text">0x9c…A4e2</span></Row>
+      <Row><span className="text-[13px] text-text-dim">Amount</span><span className="nums text-[13px]">0.50 ETH</span></Row>
+      <Row><span className="text-[13px] text-text-dim">For</span><span className="text-[13px]">Community docs translation</span></Row>
+      <Row last><span className="text-[13px] text-text-dim">Proposer</span><span className="nums text-[13px]">member · 5 votes</span></Row>
+      <div className="nums mt-4 truncate text-[11px] text-text-faint">emitted ProposalCreated · arbitrum sepolia</div>
+    </Panel>
+  );
+}
+
+function VoteFig() {
+  const voters = [
+    ["0x4Bb…ce7", "FOR", 5],
+    ["0x9c1…A4e2", "FOR", 3],
+    ["0x77d…0b51", "AGAINST", 2],
+    ["0xae2…9250", "FOR", 4],
+  ] as const;
+  return (
+    <Panel label="dao / votes #7">
+      {voters.map(([who, side, w], i) => (
+        <Row key={who} last={i === voters.length - 1}>
+          <span className="nums text-[13px] text-text-dim">{who}</span>
+          <span className="flex items-center gap-3">
+            <span className="text-[12px] uppercase tracking-[0.1em]" style={{ color: side === "FOR" ? "var(--text)" : "var(--text-faint)" }}>{side}</span>
+            <span className="nums text-[13px]">×{w}</span>
+          </span>
         </Row>
       ))}
     </Panel>
   );
 }
 
-function GraphFig() {
-  const clients = [
-    ["Acme Robotics", 98],
-    ["Vela Studio", 81],
-    ["Nimbus Labs", 56],
-    ["Orin Foundry", 34],
-  ] as const;
+function QuorumFig() {
   return (
-    <Panel label="client payment graph">
-      {clients.map(([name, score], i) => (
-        <div key={name} className={`py-3.5 ${i === clients.length - 1 ? "" : "border-b border-border"}`}>
-          <div className="flex items-center justify-between">
-            <span className="text-[13px]">{name}</span>
-            <span className="nums text-[13px] text-text">{score}</span>
-          </div>
-          <div className="mt-2 h-[3px] w-full bg-[var(--accent-dim)]">
-            <div className="h-full bg-[var(--text)]" style={{ width: `${score}%`, opacity: score >= 65 ? 1 : 0.45 }} />
-          </div>
-        </div>
-      ))}
-    </Panel>
-  );
-}
-
-function AdvanceFig() {
-  return (
-    <Panel label="advance / INV-3001">
+    <Panel label="dao / tally #7">
       <div className="flex items-baseline gap-3">
-        <span className="nums display text-[clamp(40px,5vw,64px)]">+$2,850</span>
-        <span className="text-[12px] uppercase tracking-[0.12em] text-text-faint">to you, now</span>
+        <span className="nums display text-[clamp(40px,5vw,64px)]">12 — 2</span>
+        <span className="text-[12px] uppercase tracking-[0.12em] text-text-faint">for / against</span>
       </div>
       <div className="mt-5">
-        <Row><span className="text-[13px] text-text-dim">Invoice face value</span><span className="nums text-[13px]">$3,000</span></Row>
-        <Row><span className="text-[13px] text-text-dim">Factoring fee (5%)</span><span className="nums text-[13px]">-$150</span></Row>
-        <Row><span className="text-[13px] text-text-dim">Credit proof</span><span className="nums text-[13px] text-text">verified · 98 ≥ 65</span></Row>
-        <Row last><span className="text-[13px] text-text-dim">Pool recovers on funding</span><span className="nums text-[13px]">$3,000</span></Row>
+        <Row><span className="text-[13px] text-text-dim">Quorum required</span><span className="nums text-[13px]">3</span></Row>
+        <Row><span className="text-[13px] text-text-dim">FOR votes</span><span className="nums text-[13px] text-text">12 ≥ 3 ✓</span></Row>
+        <Row><span className="text-[13px] text-text-dim">Majority</span><span className="nums text-[13px] text-text">12 &gt; 2 ✓</span></Row>
+        <Row last><span className="text-[13px] text-text-dim">Status</span><span className="nums text-[13px] text-text">passed</span></Row>
       </div>
-      <div className="nums mt-4 truncate text-[11px] text-text-faint">tx 0x9f3a…c41 · arbitrum sepolia</div>
+      <div className="nums mt-4 truncate text-[11px] text-text-faint">enforced in the contract · not by an admin</div>
     </Panel>
   );
 }
 
-function SettleFig() {
+function ExecuteFig() {
   return (
-    <Panel label="settlement / receipt">
-      <Row><span className="text-[13px] text-text-dim">Received</span><span className="nums text-[13px]">3,000.00 USDC</span></Row>
-      <Row><span className="text-[13px] text-text-dim">Held in MXNe</span><span className="nums text-[13px]">30,816 MXN</span></Row>
-      <Row><span className="text-[13px] text-text-dim">To bank · SPEI</span><span className="nums text-[13px] text-text">20,544 MXN</span></Row>
-      <Row><span className="text-[13px] text-text-dim">FX rate</span><span className="nums text-[13px]">17.12 MXN/USD</span></Row>
-      <Row last><span className="text-[13px] text-text-dim">Tax document</span><span className="nums text-[13px]">CFDI-3001-204815</span></Row>
-      <div className="nums mt-4 truncate text-[11px] text-text-faint">filed automatically · no accountant</div>
+    <Panel label="dao / execute #7">
+      <div className="flex items-baseline gap-3">
+        <span className="nums display text-[clamp(40px,5vw,64px)]">−0.50 ETH</span>
+        <span className="text-[12px] uppercase tracking-[0.12em] text-text-faint">treasury → grantee</span>
+      </div>
+      <div className="mt-5">
+        <Row><span className="text-[13px] text-text-dim">Paid to</span><span className="nums text-[13px]">0x9c…A4e2</span></Row>
+        <Row><span className="text-[13px] text-text-dim">Triggered by</span><span className="nums text-[13px]">anyone</span></Row>
+        <Row last><span className="text-[13px] text-text-dim">Treasury after</span><span className="nums text-[13px] text-text">balance − grant</span></Row>
+      </div>
+      <div className="nums mt-4 truncate text-[11px] text-text-faint">emitted Executed · transfer_eth on-chain</div>
     </Panel>
   );
 }
 
-const FIGS = [ChaseFig, GraphFig, AdvanceFig, SettleFig];
+const FIGS = [ProposeFig, VoteFig, QuorumFig, ExecuteFig];
 
 /* ---- the sticky-stack ---- */
 
