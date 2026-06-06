@@ -81,3 +81,68 @@ impl CreditVerifier {
         }
     }
 }
+
+#[cfg(test)]
+mod bridge_test {
+    // Native test: reads a real snarkjs proof + vk from /tmp and tries both G2 orderings,
+    // to pin down the snarkjs->arkworks coordinate convention. Run on the VPS after dumping:
+    //   snarkjs groth16 fullprove /tmp/input.json .../credit.wasm .../credit_final.zkey \
+    //     /tmp/proof.json /tmp/public.json
+    //   cp circuits/build/verification_key.json /tmp/vk.json
+    //   cargo test -p credit-verifier bridge -- --nocapture
+    use ark_bn254::{Bn254, Fq, Fq2, Fr, G1Affine, G2Affine};
+    use ark_groth16::{prepare_verifying_key, Groth16, Proof, VerifyingKey};
+    use ark_snark::SNARK;
+    use core::str::FromStr;
+    use std::{fs, string::String, vec::Vec};
+
+    fn fq(s: &str) -> Fq { Fq::from_str(s).unwrap() }
+    fn fr(s: &str) -> Fr { Fr::from_str(s).unwrap() }
+    fn g1(a: &serde_json::Value) -> G1Affine {
+        G1Affine::new_unchecked(fq(a[0].as_str().unwrap()), fq(a[1].as_str().unwrap()))
+    }
+    // order=false: Fq2(c0,c1)=([0],[1]); order=true: swapped
+    fn g2(a: &serde_json::Value, swap: bool) -> G2Affine {
+        let (x0, x1) = (a[0][0].as_str().unwrap(), a[0][1].as_str().unwrap());
+        let (y0, y1) = (a[1][0].as_str().unwrap(), a[1][1].as_str().unwrap());
+        if swap {
+            G2Affine::new_unchecked(Fq2::new(fq(x1), fq(x0)), Fq2::new(fq(y1), fq(y0)))
+        } else {
+            G2Affine::new_unchecked(Fq2::new(fq(x0), fq(x1)), Fq2::new(fq(y0), fq(y1)))
+        }
+    }
+
+    fn build(swap: bool) -> bool {
+        let pj: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string("/tmp/proof.json").unwrap()).unwrap();
+        let vj: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string("/tmp/vk.json").unwrap()).unwrap();
+        let pubs: Vec<String> =
+            serde_json::from_str(&fs::read_to_string("/tmp/public.json").unwrap()).unwrap();
+
+        let proof = Proof::<Bn254> {
+            a: g1(&pj["pi_a"]),
+            b: g2(&pj["pi_b"], swap),
+            c: g1(&pj["pi_c"]),
+        };
+        let ic: Vec<G1Affine> = vj["IC"].as_array().unwrap().iter().map(g1).collect();
+        let vk = VerifyingKey::<Bn254> {
+            alpha_g1: g1(&vj["vk_alpha_1"]),
+            beta_g2: g2(&vj["vk_beta_2"], swap),
+            gamma_g2: g2(&vj["vk_gamma_2"], swap),
+            delta_g2: g2(&vj["vk_delta_2"], swap),
+            gamma_abc_g1: ic,
+        };
+        let pvk = prepare_verifying_key(&vk);
+        let inputs: Vec<Fr> = pubs.iter().map(|s| fr(s)).collect();
+        Groth16::<Bn254>::verify_with_processed_vk(&pvk, &inputs, &proof).unwrap_or(false)
+    }
+
+    #[test]
+    fn find_g2_order() {
+        let asis = build(false);
+        let swapped = build(true);
+        println!("VERIFY as-is(c0,c1)={asis}  swapped(c1,c0)={swapped}");
+        assert!(asis || swapped, "neither ordering verified — bug elsewhere");
+    }
+}
