@@ -44,7 +44,12 @@ export function SplitReveal({
         scrollTrigger: { trigger: ref.current, start, once: true },
       });
     }, ref);
-    return () => ctx.revert();
+    // Failsafe: if ScrollTrigger never fires (e.g. client-side navigation), force the words
+    // visible so the page is never left blank.
+    const fail = setTimeout(() => {
+      gsap.to(words, { yPercent: 0, rotate: 0, duration: 0.4, stagger, ease: EASE, overwrite: "auto" });
+    }, 1800 + delay * 1000);
+    return () => { clearTimeout(fail); ctx.revert(); };
   }, [reduce, gsap, delay, stagger, start]);
 
   return (
@@ -80,17 +85,22 @@ export function Rise({
 
   useEffect(() => {
     if (reduce || !ref.current) return;
+    const el = ref.current;
     const ctx = gsap.context(() => {
-      gsap.from(ref.current, {
+      gsap.from(el, {
         y,
         opacity: 0,
         duration: 1,
         delay,
         ease: EASE,
-        scrollTrigger: { trigger: ref.current, start, once: true },
+        scrollTrigger: { trigger: el, start, once: true },
       });
     }, ref);
-    return () => ctx.revert();
+    // Failsafe: guarantee the block is visible even if ScrollTrigger doesn't fire on nav.
+    const fail = setTimeout(() => {
+      if (el) gsap.set(el, { clearProps: "opacity,transform" });
+    }, 1800 + delay * 1000);
+    return () => { clearTimeout(fail); ctx.revert(); };
   }, [reduce, gsap, y, delay, start]);
 
   return (
