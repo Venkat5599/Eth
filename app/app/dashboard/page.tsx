@@ -190,20 +190,33 @@ export default function Page() {
 
 function Nav({ live }: { live: boolean }) {
   return (
-    <header className="flex items-center justify-between">
-      <div className="flex items-center gap-2.5">
-        <div className="grid h-8 w-8 place-items-center rounded-[10px] text-[15px]" style={{ background: "var(--accent-dim)" }}>
-          🐍
+    <header className="flex items-center justify-between border-b border-border pb-5">
+      <a href="/" className="flex items-center gap-3">
+        <span
+          className="grid h-9 w-9 place-items-center rounded-[11px] text-[15px] font-bold"
+          style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+        >
+          C
+        </span>
+        <div className="leading-none">
+          <div className="text-[16px] font-semibold tracking-tight">Cobra</div>
+          <div className="mt-1 text-[10.5px] uppercase tracking-[0.18em] text-text-faint">Collections agent</div>
         </div>
-        <span className="text-[17px] font-semibold tracking-tight">Cobra</span>
-      </div>
+      </a>
       <div className="flex items-center gap-2 text-[12px] text-text-dim">
         <Chain name="Base" /> <Chain name="Arbitrum" /> <Chain name="Ethereum" />
         <span
-          className="ml-2 inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1"
-          style={{ color: live ? "var(--accent)" : "var(--text-faint)" }}
+          className="ml-1 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1"
+          style={{
+            color: live ? "var(--accent)" : "var(--text-faint)",
+            borderColor: live ? "var(--accent-dim)" : "var(--border)",
+            background: live ? "rgba(52,211,153,.06)" : "transparent",
+          }}
         >
-          <span className="h-1.5 w-1.5 rounded-full" style={{ background: live ? "var(--accent)" : "var(--text-faint)" }} />
+          <span className="relative flex h-1.5 w-1.5">
+            {live && <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: "var(--accent)" }} />}
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ background: live ? "var(--accent)" : "var(--text-faint)" }} />
+          </span>
           {live ? "agent live" : "agent offline"}
         </span>
       </div>
@@ -212,21 +225,22 @@ function Nav({ live }: { live: boolean }) {
 }
 
 const Chain = ({ name }: { name: string }) => (
-  <span className="rounded-full border border-border bg-surface px-2.5 py-1">{name}</span>
+  <span className="hidden rounded-full border border-border bg-surface px-2.5 py-1 sm:inline">{name}</span>
 );
 
 function Hero() {
   return (
-    <div className="mt-10 max-w-[760px]">
-      <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-[12px] text-text-dim">
-        <Sparkle size={13} weight="fill" color="var(--accent)" /> AI collections agent for LATAM freelancers
+    <div className="mt-12 max-w-[820px]">
+      <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-[11.5px] uppercase tracking-[0.14em] text-text-dim">
+        <Sparkle size={12} weight="fill" color="var(--accent)" /> Autonomous · non-custodial · on-chain
       </span>
-      <h1 className="mt-5 text-[40px] font-semibold leading-[1.05] tracking-tight md:text-[52px]">
-        Get paid, then get paid <span style={{ color: "var(--accent)" }}>early</span>.
+      <h1 className="display mt-6 text-[clamp(40px,7vw,76px)] leading-[0.98]">
+        Get paid, then paid <span style={{ color: "var(--accent)" }}>early</span>.
       </h1>
-      <p className="mt-4 max-w-[58ch] text-[15px] leading-relaxed text-text-dim">
-        Cobra chases your invoices, settles in pesos, and files the tax doc. Because it learns which
-        clients actually pay, it can advance your cash today on invoices they have not paid yet.
+      <p className="mt-5 max-w-[60ch] text-[15px] leading-relaxed text-text-dim">
+        The agent chases every invoice, settles to pesos, and files the tax doc. It learns which
+        clients actually pay — so it can front your cash <span className="text-text">today</span> on
+        invoices they haven&apos;t paid yet, gated by an on-chain credit proof.
       </p>
     </div>
   );
@@ -239,14 +253,29 @@ function Stats({ outstanding, advanced, settled }: { outstanding: number; advanc
     { label: "Settled to pesos", value: usd(settled), icon: <Bank size={16} weight="bold" /> },
   ];
   return (
-    <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
       {items.map((it) => (
-        <div key={it.label} className="rounded-[14px] border border-border bg-surface px-4 py-4">
-          <div className="flex items-center gap-2 text-[12px] text-text-dim">
+        <div
+          key={it.label}
+          className="relative overflow-hidden rounded-[16px] border px-5 py-5"
+          style={{
+            borderColor: it.accent ? "var(--accent-dim)" : "var(--border)",
+            background: it.accent
+              ? "linear-gradient(160deg, rgba(52,211,153,.10), rgba(52,211,153,.02))"
+              : "var(--surface)",
+          }}
+        >
+          {it.accent && (
+            <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full blur-2xl" style={{ background: "rgba(52,211,153,.18)" }} />
+          )}
+          <div className="flex items-center gap-2 text-[11.5px] uppercase tracking-[0.1em] text-text-dim">
             <span style={{ color: it.accent ? "var(--accent)" : "var(--text-faint)" }}>{it.icon}</span>
             {it.label}
           </div>
-          <div className="nums mt-2 text-[26px] font-semibold tracking-tight" style={{ color: it.accent ? "var(--accent)" : "var(--text)" }}>
+          <div
+            className="nums display mt-3 text-[clamp(30px,3.6vw,42px)] leading-none"
+            style={{ color: it.accent ? "var(--accent)" : "var(--text)" }}
+          >
             {it.value}
           </div>
         </div>
@@ -327,8 +356,8 @@ function NewInvoice({
 
 function SectionLabel({ children, icon }: { children: React.ReactNode; icon: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2 text-[13px] font-medium text-text-dim">
-      <span className="text-text-faint">{icon}</span>
+    <div className="flex items-center gap-2 text-[11.5px] font-medium uppercase tracking-[0.14em] text-text-dim">
+      <span style={{ color: "var(--accent)" }}>{icon}</span>
       {children}
     </div>
   );
@@ -366,28 +395,37 @@ function InvoiceCard({
   const advanced = inv.status === "advanced" || !!inv.advanceUsd;
   const lastNudge = inv.nudges.at(-1);
 
+  const statusAccent = settled || advanced;
   return (
     <motion.div
       initial={reduce ? false : { opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-      className="rounded-[14px] border border-border bg-surface p-4"
+      className="group relative overflow-hidden rounded-[18px] border bg-surface p-5 transition-colors"
+      style={{ borderColor: advanced ? "var(--accent-dim)" : "var(--border)" }}
     >
+      {advanced && <div className="absolute inset-y-0 left-0 w-[3px]" style={{ background: "var(--accent)" }} />}
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[15px] font-medium">{inv.clientName}</span>
+          <div className="flex items-center gap-2.5">
+            <span className="text-[16px] font-semibold tracking-tight">{inv.clientName}</span>
             <ScoreChip score={score} />
           </div>
-          <div className="nums mt-1 text-[12px] text-text-faint">
+          <div className="nums mt-1.5 text-[12px] text-text-faint">
             {inv.id} · due {new Date(inv.dueDate).toLocaleDateString("en-US")}
           </div>
         </div>
         <div className="text-right">
-          <div className="nums text-[20px] font-semibold tracking-tight">{usd(inv.amountUsd)}</div>
-          <div className="text-[11.5px]" style={{ color: settled ? "var(--accent)" : "var(--text-faint)" }}>
+          <div className="nums display text-[28px] leading-none">{usd(inv.amountUsd)}</div>
+          <span
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10.5px] uppercase tracking-[0.08em]"
+            style={{
+              color: statusAccent ? "var(--accent)" : "var(--text-faint)",
+              borderColor: statusAccent ? "var(--accent-dim)" : "var(--border)",
+            }}
+          >
             {STATUS_COPY[inv.status]}
-          </div>
+          </span>
         </div>
       </div>
 
@@ -401,9 +439,18 @@ function InvoiceCard({
       )}
 
       {advanced && inv.advanceUsd && (
-        <div className="nums mt-3 flex items-center gap-2 rounded-[10px] border px-3 py-2 text-[12.5px]"
-          style={{ borderColor: "var(--accent-dim)", background: "rgba(52,211,153,.05)", color: "var(--accent)" }}>
-          <Lightning size={14} weight="fill" /> {usd(inv.advanceUsd)} advanced to you · pool awaits client funding
+        <div className="mt-4 rounded-[12px] border px-4 py-3"
+          style={{ borderColor: "var(--accent-dim)", background: "linear-gradient(160deg, rgba(52,211,153,.10), rgba(52,211,153,.02))" }}>
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.1em]" style={{ color: "var(--accent)" }}>
+              <Lightning size={13} weight="fill" /> Advanced to your wallet
+            </span>
+            <span className="nums display text-[22px] leading-none" style={{ color: "var(--accent)" }}>{usd(inv.advanceUsd)}</span>
+          </div>
+          <div className="mt-1.5 text-[11.5px] text-text-faint">
+            Paid now · pool repays when the client funds the escrow{inv.advanceTx ? " · " : ""}
+            {inv.advanceTx && <a href={inv.advanceTx} target="_blank" rel="noreferrer" className="underline" style={{ color: "var(--accent)" }}>view tx ↗</a>}
+          </div>
         </div>
       )}
 
@@ -417,20 +464,21 @@ function InvoiceCard({
       )}
 
       {!settled && (
-        <div className="mt-3.5 flex items-center gap-2">
+        <div className="mt-4 flex items-center gap-2.5">
           <button
             onClick={onAdvance}
             disabled={advanced}
-            className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-medium transition active:translate-y-px disabled:opacity-40"
+            className="group/btn inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-semibold transition active:translate-y-px disabled:opacity-40"
             style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
           >
-            <Lightning size={14} weight="fill" /> {advanced ? "Advanced" : "Advance now"}
+            <Lightning size={15} weight="fill" />
+            {advanced ? "Advanced" : `Advance ${usd(Math.round(inv.amountUsd * 0.95))} now`}
           </button>
           <button
             onClick={onPay}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border-strong px-3.5 py-2 text-[13px] text-text-dim transition hover:text-text active:translate-y-px"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border-strong px-4 py-2.5 text-[13px] text-text-dim transition hover:border-text-faint hover:text-text active:translate-y-px"
           >
-            <CurrencyDollar size={14} weight="bold" /> Simulate client pays
+            <CurrencyDollar size={14} weight="bold" /> Client pays
           </button>
         </div>
       )}
