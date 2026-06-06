@@ -20,11 +20,11 @@ export const chainEnabled = !!(CONTRACT && PK);
 
 // Stylus exports Rust fn names as-is. Minimal ABI for the actions the agent drives.
 const ABI = [
-  { type: "function", name: "create_invoice", stateMutability: "nonpayable", inputs: [{ name: "client", type: "address" }, { name: "amount", type: "uint256" }, { name: "due_date", type: "uint256" }], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "fund_escrow", stateMutability: "nonpayable", inputs: [{ name: "id", type: "uint256" }], outputs: [] },
+  { type: "function", name: "createInvoice", stateMutability: "nonpayable", inputs: [{ name: "client", type: "address" }, { name: "amount", type: "uint256" }, { name: "due_date", type: "uint256" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "fundEscrow", stateMutability: "nonpayable", inputs: [{ name: "id", type: "uint256" }], outputs: [] },
   { type: "function", name: "release", stateMutability: "nonpayable", inputs: [{ name: "id", type: "uint256" }], outputs: [] },
-  { type: "function", name: "request_advance", stateMutability: "nonpayable", inputs: [{ name: "id", type: "uint256" }, { name: "proof", type: "bytes" }, { name: "public_inputs", type: "uint256[]" }], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "anchor_root", stateMutability: "nonpayable", inputs: [{ name: "epoch", type: "uint256" }, { name: "root", type: "uint256" }], outputs: [] },
+  { type: "function", name: "requestAdvance", stateMutability: "nonpayable", inputs: [{ name: "id", type: "uint256" }, { name: "proof", type: "bytes" }, { name: "public_inputs", type: "uint256[]" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "anchorRoot", stateMutability: "nonpayable", inputs: [{ name: "epoch", type: "uint256" }, { name: "root", type: "uint256" }], outputs: [] },
   { type: "function", name: "pool", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
 ] as const;
 
@@ -49,13 +49,13 @@ export const chain = {
   async createInvoice(client: `0x${string}`, amountUsd: number, dueUnix: number) {
     if (!chainEnabled || !wallet || !account) return null;
     const args = [client, parseUnits(String(amountUsd), 6), BigInt(dueUnix)] as const;
-    const { result, request } = await pub.simulateContract({ address: CONTRACT, abi: ABI, functionName: "create_invoice", args: args as never, account });
+    const { result, request } = await pub.simulateContract({ address: CONTRACT, abi: ABI, functionName: "createInvoice", args: args as never, account });
     const hash = await wallet.writeContract(request);
     await pub.waitForTransactionReceipt({ hash });
     return { id: result as bigint, hash, url: explorer(hash) };
   },
   release: (id: bigint) => send("release", [id]),
   requestAdvance: (id: bigint, proof: `0x${string}`, publicInputs: bigint[]) =>
-    send("request_advance", [id, proof, publicInputs]),
-  anchorRoot: (epoch: bigint, root: bigint) => send("anchor_root", [epoch, root]),
+    send("requestAdvance", [id, proof, publicInputs]),
+  anchorRoot: (epoch: bigint, root: bigint) => send("anchorRoot", [epoch, root]),
 };

@@ -27,7 +27,7 @@ if (!COBRA || !PK) {
 
 const ABI = [
   { type: "function", name: "init", stateMutability: "nonpayable", inputs: [{ name: "usdc", type: "address" }, { name: "credit_verifier", type: "address" }, { name: "advance_bps", type: "uint256" }, { name: "advance_threshold", type: "uint256" }], outputs: [] },
-  { type: "function", name: "anchor_root", stateMutability: "nonpayable", inputs: [{ name: "epoch", type: "uint256" }, { name: "root", type: "uint256" }], outputs: [] },
+  { type: "function", name: "anchorRoot", stateMutability: "nonpayable", inputs: [{ name: "epoch", type: "uint256" }, { name: "root", type: "uint256" }], outputs: [] },
 ] as const;
 
 const account = privateKeyToAccount(PK);
@@ -50,7 +50,7 @@ async function anchor() {
   const reputation = store.allReputation().map((r) => ({ clientId: r.clientId, score: r.score }));
   const epoch = currentEpoch();
   const root = await buildRoot(reputation, epoch);
-  const { request } = await pub.simulateContract({ address: COBRA, abi: ABI, functionName: "anchor_root", args: [epoch, root], account });
+  const { request } = await pub.simulateContract({ address: COBRA, abi: ABI, functionName: "anchorRoot", args: [epoch, root], account });
   const hash = await wallet.writeContract(request);
   await pub.waitForTransactionReceipt({ hash });
   console.log(`[anchor] epoch ${epoch} root ${root} · ${url(hash)}`);
