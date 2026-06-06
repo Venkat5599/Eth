@@ -6,7 +6,7 @@
 // missing — e.g. the circuit hasn't been built yet — generateCreditProof returns null and
 // the agent falls back to the off-chain score gate so the demo still runs.
 
-import { existsSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,7 +19,9 @@ const execFileAsync = promisify(execFile);
 const CIRCUITS = fileURLToPath(new URL("../../circuits/", import.meta.url));
 const WASM = join(CIRCUITS, "build/credit_js/credit.wasm");
 const ZKEY = join(CIRCUITS, "build/credit_final.zkey");
-const PROVER = fileURLToPath(new URL("../prove.mjs", import.meta.url)); // agent/prove.mjs (Node)
+// Prove via the snarkjs CLI — the library's fullProve deadlocks its worker pool when
+// imported under Bun/Node here; the CLI is reliable. Override with SNARKJS_BIN if needed.
+const SNARKJS = process.env.SNARKJS_BIN ?? "snarkjs";
 
 export const circuitReady = () => existsSync(WASM) && existsSync(ZKEY);
 
@@ -52,18 +54,24 @@ export async function generateCreditProof(
     pathIndices: mp.pathIndices.map(String),
   };
 
-  // Prove in a Node subprocess (Bun + snarkjs workers crash).
+  // Prove via the snarkjs CLI (writes proof.json + public.json into a temp dir).
   const dir = mkdtempSync(join(tmpdir(), "cobra-proof-"));
   const inputPath = join(dir, "input.json");
+  const proofPath = join(dir, "proof.json");
+  const publicPath = join(dir, "public.json");
   try {
     writeFileSync(inputPath, JSON.stringify(input));
-    const { stdout } = await execFileAsync("node", [PROVER, inputPath, WASM, ZKEY], {
-      maxBuffer: 16 * 1024 * 1024,
-    });
-    const { proof, publicSignals } = JSON.parse(stdout) as {
-      proof: { pi_a: string[]; pi_b: string[][]; pi_c: string[] };
-      publicSignals: string[];
+    await execFileAsync(
+      SNARKJS,
+      ["groth16", "fullprove", inputPath, WASM, ZKEY, proofPath, publicPath],
+      { maxBuffer: 16 * 1024 * 1024 },
+    );
+    const proof = JSON.parse(readFileSync(proofPath, "utf8")) as {
+      pi_a: string[];
+      pi_b: string[][];
+      pi_c: string[];
     };
+    const publicSignals = JSON.parse(readFileSync(publicPath, "utf8")) as string[];
 
     // snarkjs stores G2 as [c0, c1]; ark Fq2::new(c0, c1) — no swap. See gen-vk.mjs.
     const proofBytes =
